@@ -66,7 +66,7 @@ void g729_Set_zero(
  *-------------------------------------------------------------------*/
 
 void g729_Copy(
-    G729_Word16 x[],      /* (i)   : input vector   */
+    const G729_Word16 x[],      /* (i)   : input vector   */
     G729_Word16 y[],      /* (o)   : output vector  */
     G729_Word16 L         /* (i)   : vector length  */
 )
@@ -81,13 +81,11 @@ void g729_Copy(
 
 /* g729_Random generator  */
 
-G729_Word16 g729_Random()
+G729_Word16 g729_Random(G729_Word16 *seed)
 {
-    static G729_Word16 seed = 21845;
-    
     /* seed = seed*31821 + 13849; */
-    seed = g729_extract_l(g729_L_add(g729_L_shr(g729_L_mult(seed, 31821), 1), 13849L));
+    *seed = g729_extract_l(g729_L_add(g729_L_shr(g729_L_mult(*seed, 31821), 1), 13849L));
     
-    return(seed);
+    return(*seed);
 }
 

@@ -61,9 +61,6 @@
  *    ana[]      ->analysis parameters.                            *
  *                                                                 *
  *-----------------------------------------------------------------*/
-#include <stdio.h>
-#include <stdlib.h>
-
 #include "g729a_typedef.h"
 #include "basic_op.h"
 #include "ld8a.h"
@@ -90,7 +87,7 @@
  *         Static memory allocation.                      *
  *--------------------------------------------------------*/
 
-static G729_Word16 g729_lsp_old[M]={30000, 26000, 21000, 15000, 8000, 0, -8000,-15000,-21000,-26000};
+static const G729_Word16 g729_lsp_old[M]={30000, 26000, 21000, 15000, 8000, 0, -8000,-15000,-21000,-26000};
 
 /*-----------------------------------------------------------------*
  *   Function  g729_Init_Coder_ld8a                                     *
@@ -385,7 +382,7 @@ void g729_Coder_ld8a(
          * - Innovative codebook search.                       *
          *-----------------------------------------------------*/
         
-        index = g729_ACELP_Code_A(xn2, h1, T0, state->sharp, code, y2, &i);
+        index = g729_ACELP_Code_A(state, xn2, h1, T0, state->sharp, code, y2, &i);
         
         *ana++ = index;        /* Positions index */
         *ana++ = i;            /* Signs index     */

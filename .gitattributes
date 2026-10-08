@@ -1,0 +1,8 @@
+# Only force LF for shell/yaml so CI on Linux never sees CRLF scripts.
+# C sources keep their historical mixed EOL to avoid whole-file rewrites.
+*.sh text eol=lf
+*.yml text eol=lf
+# basic_op.c is stored with CRLF line endings and must keep them: with the
+# autocrlf default of the development environment, re-adding the file would
+# otherwise rewrite every line and destroy git blame for it.
+src/basic_op.c -text

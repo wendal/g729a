@@ -40,13 +40,15 @@
 #ifndef __G729A_TYPEDEF_H__
 #define __G729A_TYPEDEF_H__
 
+#include <stdint.h>
+
 typedef int             G729_Flag;
 typedef char            G729_Word8;
-typedef short           G729_Word16;
-typedef int             G729_Word32;
-typedef unsigned char   G729_UWord8;
-typedef unsigned short  G729_UWord16;
-typedef unsigned int    G729_UWord32;
+typedef int16_t         G729_Word16;
+typedef int32_t         G729_Word32;
+typedef uint8_t         G729_UWord8;
+typedef uint16_t        G729_UWord16;
+typedef uint32_t        G729_UWord32;
 
 #endif  /* __G729A_TYPEDEF_H__ */
 /* end of file */

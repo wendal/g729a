@@ -89,7 +89,8 @@ typedef struct _g729a_post_process_state
 
 typedef struct _g729a_decoder_state
 {
-    G729_Word32 error;  /* TODO */
+    G729_Word32 error;  /* Last error code, see g729a_errors.h                 */
+    G729_UWord32 magic; /* G729A_DEC_STATE_MAGIC once G729A_Decoder_Init() ran */
     
     /*--------------------------------------------------------------------------*
      * dec_ld8a.c
@@ -109,6 +110,8 @@ typedef struct _g729a_decoder_state
     G729_Word16 old_T0;          /* integer delay of previous frame    */
     G729_Word16 gain_code;       /* Code gain                          */
     G729_Word16 gain_pitch;      /* Pitch gain                         */
+    G729_Word16 random_seed;     /* Seed for the random generator      */
+    G729_Word16 bad_lsf;         /* Bad LSF indicator                  */
     
     G729_Word16 synth_buf[L_FRAME + M];
     G729_Word16 *synth;

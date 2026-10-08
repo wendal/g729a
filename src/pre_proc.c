@@ -71,8 +71,8 @@
 
 /* filter coefficients (fc = 140 Hz, coeff. b[] is divided by 2) */
 
-static G729_Word16 g729_b140[3] = {1899, -3798, 1899};      /* 1/2 in Q12 */
-static G729_Word16 g729_a140[3] = {4096, 7807, -3733};      /* Q12 */
+static const G729_Word16 g729_b140[3] = {1899, -3798, 1899};      /* 1/2 in Q12 */
+static const G729_Word16 g729_a140[3] = {4096, 7807, -3733};      /* Q12 */
 
 /* Static values to be preserved between calls */
 /* y[] values is keep in double precision      */
@@ -92,7 +92,7 @@ void g729_Init_Pre_Process(g729a_pre_process_state * state)
 
 void g729_Pre_Process(
     g729a_pre_process_state * state,
-    G729_Word16 singal_in[],     /* input signal */
+    const G729_Word16 singal_in[],     /* input signal (read only) */
     G729_Word16 signal_out[],    /* output signal */
     G729_Word16 lg)              /* length of signal    */
 {

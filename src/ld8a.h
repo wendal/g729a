@@ -37,27 +37,6 @@
  *  All rights reserved.
  */
 
-/**
- *  Portions of this file are derived from the following GPL notice:
- *
- *  g729a codec for iPhone and iPod Touch
- *  Copyright (C) 2009 Samuel <samuelv0304@gmail.com>
- *
- *  This program is free software; you can redistribute it and/or modify
- *  it under the terms of the GNU General Public License as published by
- *  the Free Software Foundation; either version 2 of the License, or
- *  (at your option) any later version.
- *
- *  This program is distributed in the hope that it will be useful,
- *  but WITHOUT ANY WARRANTY; without even the implied warranty of
- *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- *  GNU General Public License for more details.
- *
- *  You should have received a copy of the GNU General Public License along
- *  with this program; if not, write to the Free Software Foundation, Inc.,
- *  51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
- */
-
 /*---------------------------------------------------------------*
  * LD8A.H                                                        *
  * ~~~~~~                                                        *
@@ -272,10 +251,7 @@ void g729_Cor_h_X(
  * Innovative codebook.  *
  *-----------------------*/
 
-#define DIM_RR  616 /* size of correlation matrix                            */
-#define NB_POS  8   /* Number of positions for each pulse                    */
-#define STEP    5   /* Step betweem position of the same pulse.              */
-#define MSIZE   64  /* Size of vectors for cross-correlation between 2 pulses*/
+/* DIM_RR, NB_POS, STEP and MSIZE are defined in g729a_defines.h */
 
 /* The following constants are Q15 fractions.
    These fractions is used to keep maximum precision on "alp" sum */
@@ -284,16 +260,6 @@ void g729_Cor_h_X(
 #define _1_4    (G729_Word16)( 8192)
 #define _1_8    (G729_Word16)( 4096)
 #define _1_16   (G729_Word16)( 2048)
-
-G729_Word16  g729_ACELP_Code_A(    /* (o)     :index of pulses positions    */
-  G729_Word16 x[],            /* (i)     :Target vector                */
-  G729_Word16 h[],            /* (i) Q12 :Inpulse response of filters  */
-  G729_Word16 T0,             /* (i)     :Pitch lag                    */
-  G729_Word16 pitch_sharp,    /* (i) Q14 :Last quantized pitch gain    */
-  G729_Word16 code[],         /* (o) Q13 :Innovative codebook          */
-  G729_Word16 y[],            /* (o) Q12 :Filtered innovative codebook */
-  G729_Word16 *sign           /* (o)     :Signs of 4 pulses            */
-);
 
 void g729_Decod_ACELP(
   G729_Word16 sign,      /* (i)     : signs of 4 pulses.                       */
@@ -333,15 +299,15 @@ void g729_Lsp_expand_1_2(
 );
 
 void g729_Lsp_get_quant(
-  G729_Word16 lspcb1[][M],      /* Q13 */
-  G729_Word16 lspcb2[][M],      /* Q13 */
+  const G729_Word16 lspcb1[][M],      /* Q13 */
+  const G729_Word16 lspcb2[][M],      /* Q13 */
   G729_Word16 code0,
   G729_Word16 code1,
   G729_Word16 code2,
-  G729_Word16 fg[][M],            /* Q15 */
+  const G729_Word16 fg[][M],            /* Q15 */
   G729_Word16 freq_prev[][M],     /* Q13 */
   G729_Word16 lspq[],             /* Q13 */
-  G729_Word16 fg_sum[]            /* Q15 */
+  const G729_Word16 fg_sum[]            /* Q15 */
 );
 
 void g729_Lsp_stability(
@@ -351,17 +317,17 @@ void g729_Lsp_stability(
 void g729_Lsp_prev_compose(
   G729_Word16 lsp_ele[],             /* Q13 */
   G729_Word16 lsp[],                 /* Q13 */
-  G729_Word16 fg[][M],               /* Q15 */
+  const G729_Word16 fg[][M],               /* Q15 */
   G729_Word16 freq_prev[][M],        /* Q13 */
-  G729_Word16 fg_sum[]               /* Q15 */
+  const G729_Word16 fg_sum[]               /* Q15 */
 );
 
 void g729_Lsp_prev_extract(
   G729_Word16 lsp[M],                 /* Q13 */
   G729_Word16 lsp_ele[M],             /* Q13 */
-  G729_Word16 fg[MA_NP][M],           /* Q15 */
+  const G729_Word16 fg[MA_NP][M],           /* Q15 */
   G729_Word16 freq_prev[MA_NP][M],    /* Q13 */
-  G729_Word16 fg_sum_inv[M]           /* Q12 */
+  const G729_Word16 fg_sum_inv[M]           /* Q12 */
 );
 
 void g729_Lsp_prev_update(
@@ -415,12 +381,12 @@ void g729_Corr_xy2(
  *-----------------------*/
 
 void  g729_prm2bits_ld8k(G729_Word16 prm[], G729_Word16 bits[]);
-void  g729_bits2prm_ld8k(G729_Word16 bits[], G729_Word16 prm[]);
+void  g729_bits2prm_ld8k(const G729_Word16 bits[], G729_Word16 prm[]);
 #define BIT_0     (short)0x007f /* definition of zero-bit in bit-stream      */
 #define BIT_1     (short)0x0081 /* definition of one-bit in bit-stream       */
 
 void  g729_prm2bits_ld8k_compressed(G729_Word16 prm[], G729_UWord8 bits[]);
-void  g729_bits2prm_ld8k_compressed(G729_UWord8 bits[], G729_Word16 prm[]);
+void  g729_bits2prm_ld8k_compressed(const G729_UWord8 bits[], G729_Word16 prm[]);
 
 #define SYNC_WORD (short)0x6b21 /* definition of frame erasure flag          */
 #define SIZE_WORD (short)80     /* number of speech bits                     */
@@ -457,7 +423,7 @@ void  g729_bits2prm_ld8k_compressed(G729_UWord8 bits[], G729_Word16 prm[]);
  *--------------------------------------------------------------------------*/
 
 void g729_Copy(
-  G729_Word16 x[],      /* (i)   : input vector   */
+  const G729_Word16 x[],      /* (i)   : input vector   */
   G729_Word16 y[],      /* (o)   : output vector  */
   G729_Word16 L         /* (i)   : vector length  */
 );
@@ -467,7 +433,7 @@ void g729_Set_zero(
   G729_Word16 L          /* (i)    : length of vector    */
 );
 
-G729_Word16 g729_Random(void);
+G729_Word16 g729_Random(G729_Word16 *seed);
     
 #ifdef __cplusplus
 }

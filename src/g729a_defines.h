@@ -67,6 +67,15 @@
 #define SHARPMIN  3277    /* Minimum value of pitch sharpening     0.2  Q14 */
 
 /*--------------------------------------------------------------------------*
+ *       Innovative codebook constants (acelp_ca.c)                         *
+ *--------------------------------------------------------------------------*/
+
+#define  DIM_RR  616  /* Size of correlation matrix (scratch in encoder state) */
+#define  NB_POS  8    /* Number of positions for each pulse                    */
+#define  STEP    5    /* Step betweem position of the same pulse.              */
+#define  MSIZE   64   /* Size of vectors for cross-correlation between 2 pulses*/
+
+/*--------------------------------------------------------------------------*
  *       LSP constant parameters                                            *
  *--------------------------------------------------------------------------*/
 

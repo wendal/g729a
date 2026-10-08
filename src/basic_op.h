@@ -52,8 +52,10 @@
 #define G729A_MAX_16 (G729_Word16)0x7fff
 #define G729A_MIN_16 (G729_Word16)0x8000
 
-#if defined(USE_GLOBAL_OVERFLOW_FLAG) && (USE_GLOBAL_OVERFLOW_FLAG == 1)
-extern G729_Flag G729A_Overflow_Flag;
+/* Overflow is always tracked via local variables; the old global flag
+   mechanism was removed. Fail loudly if a stale build defines it. */
+#if defined(USE_GLOBAL_OVERFLOW_FLAG)
+#error "USE_GLOBAL_OVERFLOW_FLAG is no longer supported"
 #endif
 
 /*___________________________________________________________________________
@@ -104,18 +106,6 @@ G729_Word16 g729_msu_r(G729_Word32 L_var3, G729_Word16 var1, G729_Word16 var2);/
 G729_Word32 g729_L_shr_r(G729_Word32 L_var1, G729_Word16 var2);  /* Long shift right with round,  3*/
 G729_Word16 g729_div_s(G729_Word16 var1, G729_Word16 var2);      /* Short division,      18 */
 
-/*----------------------------------------------*
- * No use                                       *
- *----------------------------------------------*/
-    
-#if 0
-G729_Word32 g729_L_macNs(G729_Word32 L_var3, G729_Word16 var1, G729_Word16 var2); /* Mac without sat, 1*/
-G729_Word32 g729_L_msuNs(G729_Word32 L_var3, G729_Word16 var1, G729_Word16 var2); /* Msu without sat, 1*/
-G729_Word32 g729_L_sat(G729_Word32 L_var1);                         /* Long saturation,  4 */
-G729_Word32 g729_L_add_c(G729_Word32 L_var1, G729_Word32 L_var2);   /*Long add with c,   2 */
-G729_Word32 g729_L_sub_c(G729_Word32 L_var1, G729_Word32 L_var2);   /*Long sub with c,   2 */
-#endif
-    
 #ifdef __cplusplus
 }
 #endif

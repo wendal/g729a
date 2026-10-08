@@ -27,19 +27,36 @@
 #ifndef __G729_ERRORS_H__
 #define __G729_ERRORS_H__
 
-#define G729A_NO_ERROR    0
+/*--------------------------------------------------------------------------*
+ * Error codes                                                              *
+ *                                                                          *
+ * G729A_Encoder_Init(), G729A_Encoder_Process(), G729A_Decoder_Init(),     *
+ * G729A_Decoder_Process() and the *_Process_Testing() variants return      *
+ * G729A_NO_ERROR (0) on success and a negative code on failure.  The last  *
+ * error of an initialized state is kept in the state and can be read back  *
+ * with G729A_Encoder_Get_Error() and G729A_Decoder_Get_Error().            *
+ *--------------------------------------------------------------------------*/
+
+#define G729A_NO_ERROR              0
 
 /*---------------------------------------------*
- * Encoder errors                              *
+ * Generic errors (encoder and decoder)        *
  *---------------------------------------------*/
 
-/* TODO */
+#define G729A_ERROR_NULL_STATE      (-1)  /* state pointer is NULL                       */
+#define G729A_ERROR_NULL_BUFFER     (-2)  /* input or output buffer pointer is NULL      */
+#define G729A_ERROR_NOT_INITIALIZED (-3)  /* state was not set up by G729A_*_Init()      */
 
-/*---------------------------------------------*
- * Decoder errors                              *
- *---------------------------------------------*/
-
-/* TODO */
+/* Magic values the Init functions store in the magic field of their state
+   struct.  They differ per direction, so handing an encoder state to the
+   decoder API (or the other way round) is rejected instead of touching a
+   buffer with a different layout.  Any other value means the state was never
+   initialized.
+   This is a heuristic only: memory that held an initialized state before
+   must not be reused for anything else without calling the matching Init
+   function again. */
+#define G729A_ENC_STATE_MAGIC       0x47373245u  /* "G72E", encoder state */
+#define G729A_DEC_STATE_MAGIC       0x47373244u  /* "G72D", decoder state */
 
 #endif  /* __G729_ERRORS_H__ */
 /* end of file */

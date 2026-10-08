@@ -37,27 +37,6 @@
  *  All rights reserved.
  */
 
-/**
- *  Portions of this file are derived from the following GPL notice:
- *
- *  g729a codec for iPhone and iPod Touch
- *  Copyright (C) 2009 Samuel <samuelv0304@gmail.com>
- *
- *  This program is free software; you can redistribute it and/or modify
- *  it under the terms of the GNU General Public License as published by
- *  the Free Software Foundation; either version 2 of the License, or
- *  (at your option) any later version.
- *
- *  This program is distributed in the hope that it will be useful,
- *  but WITHOUT ANY WARRANTY; without even the implied warranty of
- *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- *  GNU General Public License for more details.
- *
- *  You should have received a copy of the GNU General Public License along
- *  with this program; if not, write to the Free Software Foundation, Inc.,
- *  51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
- */
-
 /*-----------------------------------------------------------------*
  *   Functions g729_Init_Decod_ld8a  and g729_Decod_ld8a                     *
  *-----------------------------------------------------------------*/
@@ -86,7 +65,7 @@
  *         Static memory allocation.                      *
  *--------------------------------------------------------*/
 
-static G729_Word16 g729_lsp_old[M]={30000, 26000, 21000, 15000, 8000, 0, -8000,-15000,-21000,-26000};
+static const G729_Word16 g729_lsp_old[M]={30000, 26000, 21000, 15000, 8000, 0, -8000,-15000,-21000,-26000};
 
 /*-----------------------------------------------------------------*
  *   Function g729_Init_Decod_ld8a                                      *
@@ -245,8 +224,8 @@ void g729_Decod_ld8a(
         if(bfi != 0)        /* Bad frame */
         {
             
-            parm[0] = g729_Random() & (G729_Word16)0x1fff;     /* 13 bits random */
-            parm[1] = g729_Random() & (G729_Word16)0x000f;     /*  4 bits random */
+            parm[0] = g729_Random(&(state->random_seed)) & (G729_Word16)0x1fff;     /* 13 bits random */
+            parm[1] = g729_Random(&(state->random_seed)) & (G729_Word16)0x000f;     /*  4 bits random */
         }
         g729_Decod_ACELP(parm[1], parm[0], code);
         parm +=2;
@@ -291,13 +270,7 @@ void g729_Decod_ld8a(
             state->exc[i+i_subfr] = g729_round(L_temp);
         }
         
-#if defined(USE_GLOBAL_OVERFLOW_FLAG) && (USE_GLOBAL_OVERFLOW_FLAG == 1)
-        G729A_Overflow_Flag = 0;
-        g729_Syn_filt(Az, &(state->exc[i_subfr]), &synth[i_subfr], L_SUBFR, state->mem_syn, 0);
-        if(G729A_Overflow_Flag != 0)
-#else
         if (g729_Syn_filt_Overflow(Az, &(state->exc[i_subfr]), &synth[i_subfr], L_SUBFR, state->mem_syn))
-#endif
         {
             /* In case of overflow in the synthesis          */
             /* -> Scale down vector exc[] and redo synthesis */

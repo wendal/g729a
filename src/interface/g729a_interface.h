@@ -46,15 +46,15 @@ extern "C" {
  *
  *  @return  Number of bytes in g729a encoder state.
  */
-G729_UWord32 G729A_Encoder_Get_Size();
+G729_UWord32 G729A_Encoder_Get_Size(void);
     
 /**
  *  @brief  Init or reset encoder.
  *
- *  @param encState,  Encoder state.
+ *  @param encState,  Encoder state, a buffer of G729A_Encoder_Get_Size() bytes.
  *
- *  @return   0, succeeded
- *           -1, if an error occurs
+ *  @return  G729A_NO_ERROR, succeeded
+ *           G729A_ERROR_NULL_STATE, if encState is NULL
  */
 G729_Word32 G729A_Encoder_Init(G729A_Enc_state encState);
     
@@ -62,22 +62,25 @@ G729_Word32 G729A_Encoder_Init(G729A_Enc_state encState);
  *  @brief  Encode a frame of 16-bit linear PCM data with g729a.
  *
  *  @param encState,  Encoder state.
- *  @param speechIn,  Speech sample input vector (80 samples).
+ *  @param speechIn,  Speech sample input vector (80 samples, read only).
  *  @param outData,   Encoded output vector (10 Bytes).
  *
- *  @return   0, succeeded
- *           -1, if an error occurs, 
+ *  @return  G729A_NO_ERROR, succeeded
+ *           G729A_ERROR_NULL_STATE, if encState is NULL
+ *           G729A_ERROR_NULL_BUFFER, if speechIn or outData is NULL
+ *           G729A_ERROR_NOT_INITIALIZED, if encState was not initialized,
  *               and you can use G729A_Encoder_Get_Error to get the last error code.
  */
-G729_Word32 G729A_Encoder_Process(G729A_Enc_state encState, G729_Word16 * speechIn, G729_UWord8 * outData);
+G729_Word32 G729A_Encoder_Process(G729A_Enc_state encState, const G729_Word16 * speechIn, G729_UWord8 * outData);
     
 /**
  *  @brief  Get last error code of encoder.
  *
  *  @param encState,  encoder state.
  *
- *  @return  -1, if getting last error code failed
- *           otherwise, return the last error code of decoder
+ *  @return  G729A_ERROR_NULL_STATE, if encState is NULL
+ *           G729A_ERROR_NOT_INITIALIZED, if encState was not initialized,
+ *           otherwise, return the last error code of encoder
  */
 G729_Word32 G729A_Encoder_Get_Error(G729A_Enc_state encState);
 
@@ -91,15 +94,15 @@ G729_Word32 G729A_Encoder_Get_Error(G729A_Enc_state encState);
  *
  *  @return  Number of bytes in g729a decoder state.
  */
-G729_UWord32 G729A_Decoder_Get_Size();
+G729_UWord32 G729A_Decoder_Get_Size(void);
 
 /**
  *  @brief  Init or reset decoder.
  *
- *  @param decState,  decoder state.
+ *  @param decState,  Decoder state, a buffer of G729A_Decoder_Get_Size() bytes.
  *
- *  @return   0, succeeded
- *           -1, if an error occurs
+ *  @return  G729A_NO_ERROR, succeeded
+ *           G729A_ERROR_NULL_STATE, if decState is NULL
  */
 G729_Word32 G729A_Decoder_Init(G729A_Dec_state decState);
     
@@ -107,21 +110,24 @@ G729_Word32 G729A_Decoder_Init(G729A_Dec_state decState);
  *  @brief  Decode a frame of g729a encoded bitstream data.
  *
  *  @param decState,   Decoder state.
- *  @param inData,     Encoded input vector (10 Bytes).
+ *  @param inData,     Encoded input vector (10 Bytes, read only).
  *  @param speechOut,  Decoded output speech vector (80 samples).
  *
- *  @return   0, succeeded
- *           -1, if an error occurs,
+ *  @return  G729A_NO_ERROR, succeeded
+ *           G729A_ERROR_NULL_STATE, if decState is NULL
+ *           G729A_ERROR_NULL_BUFFER, if inData or speechOut is NULL
+ *           G729A_ERROR_NOT_INITIALIZED, if decState was not initialized,
  *               and you can use G729A_Decoder_Get_Error to get the last error code.
  */
-G729_Word32 G729A_Decoder_Process(G729A_Dec_state decState, G729_UWord8 * inData, G729_Word16 * speechOut);
+G729_Word32 G729A_Decoder_Process(G729A_Dec_state decState, const G729_UWord8 * inData, G729_Word16 * speechOut);
 
 /**
  *  @brief  Get last error code of decoder.
  *
  *  @param decState,  Decoder state.
  *
- *  @return  -1, if getting last error code failed
+ *  @return  G729A_ERROR_NULL_STATE, if decState is NULL
+ *           G729A_ERROR_NOT_INITIALIZED, if decState was not initialized,
  *           otherwise, return the last error code of decoder
  */
 G729_Word32 G729A_Decoder_Get_Error(G729A_Dec_state decState);
@@ -136,7 +142,7 @@ G729_Word32 G729A_Decoder_Get_Error(G729A_Dec_state decState);
  *
  *  @return  A pointer to string specifying the version.
  */
-const char * G729A_Get_Version();
+const char * G729A_Get_Version(void);
     
     
 /*---------------------------------------------*
@@ -146,17 +152,17 @@ const char * G729A_Get_Version();
     
 /**
  *  @param encState,  Encoder state.
- *  @param speechIn,  Speech sample input vector (80 samples).
+ *  @param speechIn,  Speech sample input vector (80 samples, read only).
  *  @param outData,   Encoded output vector (164 Bytes).
  */
-G729_Word32 G729A_Encoder_Process_Testing(G729A_Enc_state encState, G729_Word16 * speechIn, G729_Word16 * outData);
+G729_Word32 G729A_Encoder_Process_Testing(G729A_Enc_state encState, const G729_Word16 * speechIn, G729_Word16 * outData);
     
 /**
  *  @param decState,   Decoder state.
- *  @param inData,     Encoded input vector (164 Bytes).
+ *  @param inData,     Encoded input vector (164 Bytes, read only).
  *  @param speechOut,  Decoded output speech vector (80 samples).
  */
-G729_Word32 G729A_Decoder_Process_Testing(G729A_Dec_state decState, G729_Word16 * inData, G729_Word16 * speechOut);
+G729_Word32 G729A_Decoder_Process_Testing(G729A_Dec_state decState, const G729_Word16 * inData, G729_Word16 * speechOut);
     
 #ifdef __cplusplus
 }

@@ -37,27 +37,6 @@
  *  All rights reserved.
  */
 
-/**
- *  Portions of this file are derived from the following GPL notice:
- *
- *  g729a codec for iPhone and iPod Touch
- *  Copyright (C) 2009 Samuel <samuelv0304@gmail.com>
- *
- *  This program is free software; you can redistribute it and/or modify
- *  it under the terms of the GNU General Public License as published by
- *  the Free Software Foundation; either version 2 of the License, or
- *  (at your option) any later version.
- *
- *  This program is distributed in the hope that it will be useful,
- *  but WITHOUT ANY WARRANTY; without even the implied warranty of
- *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- *  GNU General Public License for more details.
- *
- *  You should have received a copy of the GNU General Public License along
- *  with this program; if not, write to the Free Software Foundation, Inc.,
- *  51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
- */
-
 /*****************************************************************************/
 /* bit stream manipulation routines                                          */
 /*****************************************************************************/
@@ -65,12 +44,11 @@
 #include "ld8a.h"
 #include "tab_ld8a.h"
 
-#include "get_bits.h"
-#include "put_bits.h"
+#include "bitstream.h"
 
 /* prototypes for local functions */
 static void  int2bin(G729_Word16 value, G729_Word16 no_of_bits, G729_Word16 *bitstream);
-static G729_Word16   bin2int(G729_Word16 no_of_bits, G729_Word16 *bitstream);
+static G729_Word16   bin2int(G729_Word16 no_of_bits, const G729_Word16 *bitstream);
 
 /*----------------------------------------------------------------------------
  * g729_prm2bits_ld8k -converts encoder parameter vector into vector of serial bits
@@ -145,7 +123,7 @@ static void int2bin(
  *----------------------------------------------------------------------------
  */
 void g729_bits2prm_ld8k(
-        G729_Word16 bits[],            /* input : serial bits (80)                       */
+        const G729_Word16 bits[],      /* input : serial bits (80)                       */
         G729_Word16   prm[]            /* output: decoded parameters (11 parameters)     */
         )
 {
@@ -164,7 +142,7 @@ void g729_bits2prm_ld8k(
  */
 static G729_Word16 bin2int(       /* output: decimal value of bit pattern */
         G729_Word16 no_of_bits,          /* input : number of bits to read       */
-        G729_Word16 *bitstream           /* input : array containing bits        */
+        const G729_Word16 *bitstream     /* input : array containing bits        */
         )
 {
     G729_Word16   value, i;
@@ -185,30 +163,30 @@ void g729_prm2bits_ld8k_compressed(
     G729_UWord8 bits[]            /* output: serial bits (SERIAL_SIZE )*/
 )
 {
-    PutBitContext pb;
+    G729_BitWriter bw;
     int i;
 
-    init_put_bits(&pb, bits, 10);
+    g729_bit_writer_init(&bw, bits, 10);  /* 80 bits = 10 bytes */
 
     for (i = 0; i < PRM_SIZE; ++i)
     {
-        put_bits(&pb, g729_bitsno[i], prm[i]);
+        g729_put_bits(&bw, (unsigned int)g729_bitsno[i], (G729_UWord32)prm[i]);
     }
-    flush_put_bits(&pb);
+    g729_flush_bits(&bw);
 }
 
 void g729_bits2prm_ld8k_compressed(
-    G729_UWord8  bits[],            /* input : serial bits (80)                       */
+    const G729_UWord8  bits[],      /* input : serial bits (80)                       */
     G729_Word16  prm[]              /* output: decoded parameters (11 parameters)     */
 )
 {
-    GetBitContext gb;
+    G729_BitReader br;
     int i;
 
-    init_get_bits(&gb, bits, 10 /*buf_size*/);
+    g729_bit_reader_init(&br, bits, 10);  /* 80 bits = 10 bytes */
 
     for (i = 0; i < PRM_SIZE; ++i)
     {
-        prm[i] = get_bits(&gb, g729_bitsno[i]);
+        prm[i] = (G729_Word16)g729_get_bits(&br, (unsigned int)g729_bitsno[i]);
     }
 }

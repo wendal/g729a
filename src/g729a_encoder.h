@@ -77,7 +77,8 @@ typedef struct _g729a_taming_state
 
 typedef struct _g729a_encoder_state
 {
-    G729_Word32 error;  /* TODO */
+    G729_Word32 error;  /* Last error code, see g729a_errors.h                  */
+    G729_UWord32 magic; /* G729A_ENC_STATE_MAGIC once G729A_Encoder_Init() ran  */
     
     /*--------------------------------------------------------------------------*
      * cod_ld8a.c                                                               *
@@ -115,6 +116,14 @@ typedef struct _g729a_encoder_state
     G729_Word16 past_qua_en[4];
     
     /*--------------------------------------------------------------------------*
+     * acelp_ca.c                                                               *
+     *--------------------------------------------------------------------------*/
+    
+    /* Correlations of the impulse response h[]; scratch space of
+       g729_ACELP_Code_A(), kept here to avoid a large stack frame. */
+    G729_Word16 acelp_rr[DIM_RR];
+    
+    /*--------------------------------------------------------------------------*
      *--------------------------------------------------------------------------*/
     
     g729a_pre_process_state  pre_process_state;
@@ -146,7 +155,7 @@ void g729_Init_Pre_Process(g729a_pre_process_state * state);
 
 void g729_Pre_Process(
     g729a_pre_process_state * state,
-    G729_Word16 singal_in[],    /* Input signal */
+    const G729_Word16 singal_in[],  /* Input signal (read only) */
     G729_Word16 signal_out[],   /* Output signal */
     G729_Word16 lg              /* Length of signal    */
 );
@@ -184,6 +193,21 @@ G729_Word16 g729_Qua_gain(
     G729_Word16 *gain_pit,     /* (o) Q14 : Pitch gain.                                */
     G729_Word16 *gain_cod,     /* (o) Q1  : Code gain.                                 */
     G729_Word16 tameflag       /* (i)     : flag set to 1 if taming is needed          */
+);
+    
+/*--------------------------------------------------------------------------*
+ * acelp_ca.c                                                               *
+ *--------------------------------------------------------------------------*/
+    
+G729_Word16 g729_ACELP_Code_A(     /* (o)     :index of pulses positions    */
+    g729a_encoder_state * state,   /* (i/o)   :Encoder state (scratch)      */
+    G729_Word16 x[],               /* (i)     :Target vector                */
+    G729_Word16 h[],               /* (i) Q12 :Inpulse response of filters  */
+    G729_Word16 T0,                /* (i)     :Pitch lag                    */
+    G729_Word16 pitch_sharp,       /* (i) Q14 :Last quantized pitch gain    */
+    G729_Word16 code[],            /* (o) Q13 :Innovative codebook          */
+    G729_Word16 y[],               /* (o) Q12 :Filtered innovative codebook */
+    G729_Word16 *sign              /* (o)     :Signs of 4 pulses            */
 );
     
 #ifdef __cplusplus

@@ -49,8 +49,6 @@
  |___________________________________________________________________________|
  */
 
-#include <stdio.h>
-#include <stdlib.h>
 #include "g729a_typedef.h"
 #include "basic_op.h"
 
@@ -61,11 +59,6 @@
  */
 
 /* G729_Flag Carry =0; */
-
-#if !defined(USE_GLOBAL_OVERFLOW_FLAG) || (USE_GLOBAL_OVERFLOW_FLAG != 1)
-static
-#endif
-G729_Flag G729A_Overflow_Flag = 0;
 
 /*___________________________________________________________________________
  |                                                                           |
@@ -105,17 +98,14 @@ static G729_Word16 g729_sature(G729_Word32 L_var1)
     
     if (L_var1 > 0X00007fffL)
     {
-        G729A_Overflow_Flag = 1;
         var_out = G729A_MAX_16;
     }
     else if (L_var1 < (G729_Word32)0xffff8000L)
     {
-        G729A_Overflow_Flag = 1;
         var_out = G729A_MIN_16;
     }
     else
     {
-        G729A_Overflow_Flag = 0;
         var_out = g729_extract_l(L_var1);
     }
     
@@ -714,7 +704,6 @@ G729_Word16 g729_shl(G729_Word16 var1, G729_Word16 var2)
         resultat = (G729_Word32) var1 * ((G729_Word32) 1 << var2);
         if ((var2 > 15 && var1 != 0) || (resultat != (G729_Word32)((G729_Word16) resultat)))
         {
-            G729A_Overflow_Flag = 1;
             var_out = (var1 > 0) ? G729A_MAX_16 : G729A_MIN_16;
         }
         else
@@ -886,7 +875,6 @@ G729_Word32 g729_L_add(G729_Word32 L_var1, G729_Word32 L_var2)
         if ((L_var_out ^ L_var1) & G729A_MIN_32)
         {
             L_var_out = (L_var1 < 0) ? G729A_MIN_32 : G729A_MAX_32;
-            G729A_Overflow_Flag = 1;
         }
     }
     return(L_var_out);
@@ -935,7 +923,6 @@ G729_Word32 g729_L_sub(G729_Word32 L_var1, G729_Word32 L_var2)
         if ((L_var_out ^ L_var1) & G729A_MIN_32)
         {
             L_var_out = (L_var1 < 0L) ? G729A_MIN_32 : G729A_MAX_32;
-            G729A_Overflow_Flag = 1;
         }
     }
     return(L_var_out);
@@ -992,7 +979,6 @@ G729_Word32 g729_L_shl(G729_Word32 L_var1, G729_Word16 var2)
         {
             if (L_var1 > (G729_Word32) 0X3fffffffL)
             {
-                G729A_Overflow_Flag = 1;
                 L_var_out = G729A_MAX_32;
                 break;
             }
@@ -1000,7 +986,6 @@ G729_Word32 g729_L_shl(G729_Word32 L_var1, G729_Word16 var2)
             {
                 if (L_var1 < (G729_Word32) 0xc0000000L)
                 {
-                    G729A_Overflow_Flag = 1;
                     L_var_out = G729A_MIN_32;
                     break;
                 }
@@ -1121,7 +1106,6 @@ G729_Word32 g729_L_mult(G729_Word16 var1, G729_Word16 var2)
     }
     else
     {
-        G729A_Overflow_Flag = 1;
         L_var_out = G729A_MAX_32;
     }
     
@@ -1568,6 +1552,8 @@ G729_Word32 g729_L_shr_r(G729_Word32 L_var1,G729_Word16 var2)
  |             16 bit short signed integer (G729_Word16) whose value falls   |
  |             in the range : 0x0000 0000 <= var_out <= 0x0000 7fff.         |
  |             It's a Q15 value (point between b15 and b14).                 |
+ |             On invalid operands or division by zero the result saturates  |
+ |             to G729A_MIN_16/G729A_MAX_16 instead of aborting.             |
  |___________________________________________________________________________|
  */
 
@@ -1580,14 +1566,14 @@ G729_Word16 g729_div_s(G729_Word16 var1, G729_Word16 var2)
     
     if ((var1 > var2) || (var1 < 0) || (var2 < 0))
     {
-        printf("Division Error var1=%d  var2=%d\n",var1,var2);
-        exit(0);
+        /* Invalid operands: saturate to the extreme matching the quotient's sign. */
+        return ((var1 < 0) != (var2 < 0)) ? G729A_MIN_16 : G729A_MAX_16;
     }
     
     if (var2 == 0)
     {
-        printf("Division by 0, Fatal error \n");
-        exit(0);
+        /* Division by zero: same saturation, keeps the library free of stdio. */
+        return (var1 < 0) ? G729A_MIN_16 : G729A_MAX_16;
     }
     
     if (var1 == 0)
@@ -1622,370 +1608,4 @@ G729_Word16 g729_div_s(G729_Word16 var1, G729_Word16 var2)
     return(var_out);
 }
 
-/*___________________________________________________________________________
- |                                                                           |
- |   No use functions                                                        |
- |___________________________________________________________________________|
- */
-
-#if 0
-
-/*__________________________________________________________________________________________
- |                                                                                          |
- |   Function Name : g729_L_macNs                                                           |
- |                                                                                          |
- |   Purpose :                                                                              |
- |                                                                                          |
- |   Multiply var1 by var2 and shift the result left by 1. Add the 32 bit                   |
- |   result to L_var3 without saturation, return a 32 bit result. Generate                  |
- |   carry and overflow values :                                                            |
- |        g729_L_macNs(L_var3,var1,var2) = g729_L_add_c(L_var3,(g729_L_mult(var1,var2)).    |
- |                                                                                          |
- |   Complexity weight : 1                                                                  |
- |                                                                                          |
- |   Inputs :                                                                               |
- |                                                                                          |
- |    L_var3   32 bit long signed integer (G729_Word32) whose value falls in the            |
- |             range : 0x8000 0000 <= L_var3 <= 0x7fff ffff.                                |
- |                                                                                          |
- |    var1                                                                                  |
- |             16 bit short signed integer (G729_Word16) whose value falls in the           |
- |             range : 0xffff 8000 <= var1 <= 0x0000 7fff.                                  |
- |                                                                                          |
- |    var2                                                                                  |
- |             16 bit short signed integer (G729_Word16) whose value falls in the           |
- |             range : 0xffff 8000 <= var1 <= 0x0000 7fff.                                  |
- |                                                                                          |
- |   Outputs :                                                                              |
- |                                                                                          |
- |    none                                                                                  |
- |                                                                                          |
- |   Return Value :                                                                         |
- |                                                                                          |
- |    L_var_out                                                                             |
- |             32 bit long signed integer (G729_Word32) whose value falls in the            |
- |             range : 0x8000 0000 <= L_var_out <= 0x7fff ffff.                             |
- |                                                                                          |
- |   Caution :                                                                              |
- |                                                                                          |
- |    In some cases the Carry flag has to be cleared or set before using op-                |
- |    rators which take into account its value.                                             |
- |__________________________________________________________________________________________|
- */
-
-G729_Word32 g729_L_macNs(G729_Word32 L_var3, G729_Word16 var1, G729_Word16 var2)
-{
-    G729_Word32 L_var_out;
-    
-    L_var_out = g729_L_mult(var1, var2);
-    L_var_out = g729_L_add_c(L_var3,L_var_out);
-    return(L_var_out);
-}
-
-/*__________________________________________________________________________________________
- |                                                                                          |
- |   Function Name : g729_L_msuNs                                                           |
- |                                                                                          |
- |   Purpose :                                                                              |
- |                                                                                          |
- |   Multiply var1 by var2 and shift the result left by 1. Subtract the 32                  |
- |   bit result from L_var3 without saturation, return a 32 bit result. Ge-                 |
- |   nerate carry and overflow values :                                                     |
- |        g729_L_msuNs(L_var3,var1,var2) = g729_L_sub_c(L_var3,(g729_L_mult(var1,var2)).    |
- |                                                                                          |
- |   Complexity weight : 1                                                                  |
- |                                                                                          |
- |   Inputs :                                                                               |
- |                                                                                          |
- |    L_var3   32 bit long signed integer (G729_Word32) whose value falls in the            |
- |             range : 0x8000 0000 <= L_var3 <= 0x7fff ffff.                                |
- |                                                                                          |
- |    var1                                                                                  |
- |             16 bit short signed integer (G729_Word16) whose value falls in the           |
- |             range : 0xffff 8000 <= var1 <= 0x0000 7fff.                                  |
- |                                                                                          |
- |    var2                                                                                  |
- |             16 bit short signed integer (G729_Word16) whose value falls in the           |
- |             range : 0xffff 8000 <= var1 <= 0x0000 7fff.                                  |
- |                                                                                          |
- |   Outputs :                                                                              |
- |                                                                                          |
- |    none                                                                                  |
- |                                                                                          |
- |   Return Value :                                                                         |
- |                                                                                          |
- |    L_var_out                                                                             |
- |             32 bit long signed integer (G729_Word32) whose value falls in the            |
- |             range : 0x8000 0000 <= L_var_out <= 0x7fff ffff.                             |
- |                                                                                          |
- |   Caution :                                                                              |
- |                                                                                          |
- |    In some cases the Carry flag has to be cleared or set before using op-                |
- |    rators which take into account its value.                                             |
- |__________________________________________________________________________________________|
- */
-
-G729_Word32 g729_L_msuNs(G729_Word32 L_var3, G729_Word16 var1, G729_Word16 var2)
-{
-    G729_Word32 L_var_out;
-    
-    L_var_out = g729_L_mult(var1,var2);
-    L_var_out = g729_L_sub_c(L_var3,L_var_out);
-    return(L_var_out);
-}
-
-/*___________________________________________________________________________
- |                                                                           |
- |   Function Name : g729_L_sat                                              |
- |                                                                           |
- |   Purpose :                                                               |
- |                                                                           |
- |    32 bit L_var1 is set to 2147833647 if an overflow occurred or to       |
- |    -214783648 if an underflow occurred on the most recent g729_L_add_c,   |
- |    g729_L_sub_c, g729_L_macNs or LmsuNs operations. The carry and         |
- |    overflow values are binary values which can be tested and              |
- |    assigned values.                                                       |
- |                                                                           |
- |   Complexity weight : 4                                                   |
- |                                                                           |
- |   Inputs :                                                                |
- |                                                                           |
- |    L_var1                                                                 |
- |             32 bit long signed integer (G729_Word32) whose value falls    |
- |             in the range : 0x8000 0000 <= var1 <= 0x7fff ffff.            |
- |                                                                           |
- |   Outputs :                                                               |
- |                                                                           |
- |    none                                                                   |
- |                                                                           |
- |   Return Value :                                                          |
- |                                                                           |
- |    L_var_out                                                              |
- |             32 bit long signed integer (G729_Word32) whose value falls    |
- |             in the range : 0x8000 0000 <= var_out <= 0x7fff ffff.         |
- |___________________________________________________________________________|
- */
-
-G729_Word32 g729_L_sat (G729_Word32 L_var1)
-{
-    G729_Word32 L_var_out;
-    
-    L_var_out = L_var1;
-    
-    if (Overflow)
-    {
-        if (Carry)
-        {
-            L_var_out = G729A_MIN_32;
-        }
-        else
-        {
-            L_var_out = G729A_MAX_32;
-        }
-        
-        Carry = 0;
-        Overflow = 0;
-    }
-    
-    return(L_var_out);
-}
-
-/*___________________________________________________________________________
- |                                                                           |
- |   Function Name : g729_L_add_c                                            |
- |                                                                           |
- |   Purpose :                                                               |
- |                                                                           |
- |   Performs 32 bits addition of the two 32 bits variables (L_var1+L_var2+C)|
- |   with carry. No saturation. Generate carry and Overflow values. The car- |
- |   ry and overflow values are binary variables which can be tested and as- |
- |   signed values.                                                          |
- |                                                                           |
- |   Complexity weight : 2                                                   |
- |                                                                           |
- |   Inputs :                                                                |
- |                                                                           |
- |    L_var1   32 bit long signed integer (G729_Word32) whose value falls    |
- |             in the range : 0x8000 0000 <= L_var3 <= 0x7fff ffff.          |
- |                                                                           |
- |    L_var2   32 bit long signed integer (G729_Word32) whose value falls    |
- |             in the range : 0x8000 0000 <= L_var3 <= 0x7fff ffff.          |
- |                                                                           |
- |   Outputs :                                                               |
- |                                                                           |
- |    none                                                                   |
- |                                                                           |
- |   Return Value :                                                          |
- |                                                                           |
- |    L_var_out                                                              |
- |             32 bit long signed integer (G729_Word32) whose value falls    |
- |             in the range : 0x8000 0000 <= L_var_out <= 0x7fff ffff.       |
- |                                                                           |
- |   Caution :                                                               |
- |                                                                           |
- |    In some cases the Carry flag has to be cleared or set before using op- |
- |    rators which take into account its value.                              |
- |___________________________________________________________________________|
- */
-G729_Word32 g729_L_add_c(G729_Word32 L_var1, G729_Word32 L_var2)
-{
-    G729_Word32 L_var_out;
-    G729_Word32 L_test;
-    G729_Flag carry_int = 0;
-    
-    L_var_out = L_var1 + L_var2 + Carry;
-    
-    L_test = L_var1 + L_var2;
-    
-    if ((L_var1>0) && (L_var2 >0) && (L_test < 0))
-    {
-        Overflow = 1;
-        carry_int = 0;
-    }
-    else
-    {
-        if ((L_var1<0) && (L_var2 <0) && (L_test >0))
-        {
-            Overflow = 1;
-            carry_int = 1;
-        }
-        else
-        {
-            if (((L_var1 ^ L_var2) < 0) && (L_test > 0))
-            {
-                Overflow = 0;
-                carry_int = 1;
-            }
-            else
-            {
-                Overflow = 0;
-                carry_int = 0;
-            }
-        }
-    }
-    
-    if (Carry)
-    {
-        if (L_test == G729A_MAX_32)
-        {
-            Overflow = 1;
-            Carry = carry_int;
-        }
-        else
-        {
-            if (L_test == (G729_Word32) 0xFFFFFFFFL)
-            {
-                Carry = 1;
-            }
-            else
-            {
-                Carry = carry_int;
-            }
-        }
-    }
-    else
-    {
-        Carry = carry_int;
-    }
-    
-    return(L_var_out);
-}
-
-/*___________________________________________________________________________
- |                                                                           |
- |   Function Name : g729_L_sub_c                                            |
- |                                                                           |
- |   Purpose :                                                               |
- |                                                                           |
- |   Performs 32 bits subtraction of the two 32 bits variables with carry    |
- |   (borrow) : L_var1-L_var2-C. No saturation. Generate carry and Overflow  |
- |   values. The carry and overflow values are binary variables which can    |
- |   be tested and assigned values.                                          |
- |                                                                           |
- |   Complexity weight : 2                                                   |
- |                                                                           |
- |   Inputs :                                                                |
- |                                                                           |
- |    L_var1   32 bit long signed integer (G729_Word32) whose value falls    |
- |             in the range : 0x8000 0000 <= L_var3 <= 0x7fff ffff.          |
- |                                                                           |
- |    L_var2   32 bit long signed integer (G729_Word32) whose value falls    |
- |             in the range : 0x8000 0000 <= L_var3 <= 0x7fff ffff.          |
- |                                                                           |
- |   Outputs :                                                               |
- |                                                                           |
- |    none                                                                   |
- |                                                                           |
- |   Return Value :                                                          |
- |                                                                           |
- |    L_var_out                                                              |
- |             32 bit long signed integer (G729_Word32) whose value falls    |
- |             in the range : 0x8000 0000 <= L_var_out <= 0x7fff ffff.       |
- |                                                                           |
- |   Caution :                                                               |
- |                                                                           |
- |    In some cases the Carry flag has to be cleared or set before using op- |
- |    rators which take into account its value.                              |
- |___________________________________________________________________________|
- */
-
-G729_Word32 g729_L_sub_c(G729_Word32 L_var1, G729_Word32 L_var2)
-{
-    G729_Word32 L_var_out;
-    G729_Word32 L_test;
-    G729_Flag carry_int = 0;
-    
-    if (Carry)
-    {
-        Carry = 0;
-        if (L_var2 != G729A_MIN_32)
-        {
-            L_var_out = g729_L_add_c(L_var1,-L_var2);
-        }
-        else
-        {
-            L_var_out = L_var1 - L_var2;
-            if (L_var1 > 0L)
-            {
-                Overflow = 1;
-                Carry = 0;
-            }
-        }
-    }
-    else
-    {
-        L_var_out = L_var1 - L_var2 - (G729_Word32)0X00000001;
-        L_test = L_var1 - L_var2;
-        
-        if ((L_test < 0) && (L_var1 > 0) && (L_var2 < 0))
-        {
-            Overflow = 1;
-            carry_int = 0;
-        }
-        else if ((L_test > 0) && (L_var1 < 0) && (L_var2 > 0))
-        {
-            Overflow = 1;
-            carry_int = 1;
-        }
-        else if ((L_test > 0) && ((L_var1 ^ L_var2) > 0))
-        {
-            Overflow = 0;
-            carry_int = 1;
-        }
-        
-        
-        if (L_test == G729A_MIN_32)
-        {
-            Overflow = 1;
-            Carry = carry_int;
-        }
-        else
-        {
-            Carry = carry_int;
-        }
-    }
-    
-    return(L_var_out);
-}
-#endif  /* #if 0 */
 /* end of file */

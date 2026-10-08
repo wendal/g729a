@@ -69,8 +69,8 @@
 
 /* filter coefficients (fc = 100 Hz) */
 
-static G729_Word16 g729_b100[3] = {7699, -15398, 7699};      /* Q13 */
-static G729_Word16 g729_a100[3] = {8192, 15836, -7667};      /* Q13 */
+static const G729_Word16 g729_b100[3] = {7699, -15398, 7699};      /* Q13 */
+static const G729_Word16 g729_a100[3] = {8192, 15836, -7667};      /* Q13 */
 
 /* Static values to be preserved between calls */
 /* y[] values is keep in double precision      */

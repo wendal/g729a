@@ -44,37 +44,37 @@
 extern "C" {
 #endif
     
-extern G729_Word16 g729_hamwindow[L_WINDOW];
-extern G729_Word16 g729_lag_h[M];
-extern G729_Word16 g729_lag_l[M];
-extern G729_Word16 g729_table[65];
-extern G729_Word16 g729_slope[64];
-extern G729_Word16 g729_table2[64];
-extern G729_Word16 g729_slope_cos[64];
-extern G729_Word16 g729_slope_acos[64];
-extern G729_Word16 g729_lspcb1[NC0][M];
-extern G729_Word16 g729_lspcb2[NC1][M];
-extern G729_Word16 g729_fg[2][MA_NP][M];
-extern G729_Word16 g729_fg_sum[2][M];
-extern G729_Word16 g729_fg_sum_inv[2][M];
-extern G729_Word16 g729_grid[GRID_POINTS+1];
-extern G729_Word16 g729_inter_3l[FIR_SIZE_SYN];
-extern G729_Word16 g729_pred[4];
-extern G729_Word16 g729_gbk1[NCODE1][2];
-extern G729_Word16 g729_gbk2[NCODE2][2];
-extern G729_Word16 g729_map1[NCODE1];
-extern G729_Word16 g729_map2[NCODE2];
-extern G729_Word16 g729_coef[2][2];
-extern G729_Word32 g729_L_coef[2][2];
-extern G729_Word16 g729_thr1[NCODE1-NCAN1];
-extern G729_Word16 g729_thr2[NCODE2-NCAN2];
-extern G729_Word16 g729_imap1[NCODE1];
-extern G729_Word16 g729_imap2[NCODE2];
-extern G729_Word16 g729_bitsno[PRM_SIZE];
-extern G729_Word16 g729_tabpow[33];
-extern G729_Word16 g729_tablog[33];
-extern G729_Word16 g729_tabsqr[49];
-extern G729_Word16 g729_tab_zone[PIT_MAX+L_INTERPOL-1];
+extern const G729_Word16 g729_hamwindow[L_WINDOW];
+extern const G729_Word16 g729_lag_h[M];
+extern const G729_Word16 g729_lag_l[M];
+extern const G729_Word16 g729_table[65];
+extern const G729_Word16 g729_slope[64];
+extern const G729_Word16 g729_table2[64];
+extern const G729_Word16 g729_slope_cos[64];
+extern const G729_Word16 g729_slope_acos[64];
+extern const G729_Word16 g729_lspcb1[NC0][M];
+extern const G729_Word16 g729_lspcb2[NC1][M];
+extern const G729_Word16 g729_fg[2][MA_NP][M];
+extern const G729_Word16 g729_fg_sum[2][M];
+extern const G729_Word16 g729_fg_sum_inv[2][M];
+extern const G729_Word16 g729_grid[GRID_POINTS+1];
+extern const G729_Word16 g729_inter_3l[FIR_SIZE_SYN];
+extern const G729_Word16 g729_pred[4];
+extern const G729_Word16 g729_gbk1[NCODE1][2];
+extern const G729_Word16 g729_gbk2[NCODE2][2];
+extern const G729_Word16 g729_map1[NCODE1];
+extern const G729_Word16 g729_map2[NCODE2];
+extern const G729_Word16 g729_coef[2][2];
+extern const G729_Word32 g729_L_coef[2][2];
+extern const G729_Word16 g729_thr1[NCODE1-NCAN1];
+extern const G729_Word16 g729_thr2[NCODE2-NCAN2];
+extern const G729_Word16 g729_imap1[NCODE1];
+extern const G729_Word16 g729_imap2[NCODE2];
+extern const G729_Word16 g729_bitsno[PRM_SIZE];
+extern const G729_Word16 g729_tabpow[33];
+extern const G729_Word16 g729_tablog[33];
+extern const G729_Word16 g729_tabsqr[49];
+extern const G729_Word16 g729_tab_zone[PIT_MAX+L_INTERPOL-1];
 
 #ifdef __cplusplus
 }
