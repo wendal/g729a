@@ -37,8 +37,6 @@
  *  All rights reserved.
  */
 
-#include <stdio.h>
-
 #include "g729a_interface.h"
 
 #include "g729a_encoder.h"

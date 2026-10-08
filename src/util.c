@@ -66,7 +66,7 @@ void g729_Set_zero(
  *-------------------------------------------------------------------*/
 
 void g729_Copy(
-    G729_Word16 x[],      /* (i)   : input vector   */
+    const G729_Word16 x[],      /* (i)   : input vector   */
     G729_Word16 y[],      /* (o)   : output vector  */
     G729_Word16 L         /* (i)   : vector length  */
 )

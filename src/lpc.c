@@ -438,7 +438,6 @@ void g729_Az_lsp(
     }
     
     if ( ovf_coef ) {
-        /*printf("===== OVF ovf_coef =====\n");*/
         
         pChebps = Chebps_10;
         
@@ -562,8 +561,6 @@ void g729_Az_lsp(
         {
             lsp[i] = old_lsp[i];
         }
-        
-        /* printf("\n !!Not 10 roots found in g729_Az_lsp()!!!\n"); */
     }
     
     return;

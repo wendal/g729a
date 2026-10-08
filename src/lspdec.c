@@ -46,7 +46,7 @@
 
 /* static memory */
 
-static G729_Word16 freq_prev_reset[M] = { /* Q13 */
+static const G729_Word16 freq_prev_reset[M] = { /* Q13 */
     2339, 4679, 7018, 9358, 11698, 14037, 16377, 18717, 21056, 23396
 };     /* PI*(float)(j+1)/(float)(M+1) */
 

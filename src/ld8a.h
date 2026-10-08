@@ -333,15 +333,15 @@ void g729_Lsp_expand_1_2(
 );
 
 void g729_Lsp_get_quant(
-  G729_Word16 lspcb1[][M],      /* Q13 */
-  G729_Word16 lspcb2[][M],      /* Q13 */
+  const G729_Word16 lspcb1[][M],      /* Q13 */
+  const G729_Word16 lspcb2[][M],      /* Q13 */
   G729_Word16 code0,
   G729_Word16 code1,
   G729_Word16 code2,
-  G729_Word16 fg[][M],            /* Q15 */
+  const G729_Word16 fg[][M],            /* Q15 */
   G729_Word16 freq_prev[][M],     /* Q13 */
   G729_Word16 lspq[],             /* Q13 */
-  G729_Word16 fg_sum[]            /* Q15 */
+  const G729_Word16 fg_sum[]            /* Q15 */
 );
 
 void g729_Lsp_stability(
@@ -351,17 +351,17 @@ void g729_Lsp_stability(
 void g729_Lsp_prev_compose(
   G729_Word16 lsp_ele[],             /* Q13 */
   G729_Word16 lsp[],                 /* Q13 */
-  G729_Word16 fg[][M],               /* Q15 */
+  const G729_Word16 fg[][M],               /* Q15 */
   G729_Word16 freq_prev[][M],        /* Q13 */
-  G729_Word16 fg_sum[]               /* Q15 */
+  const G729_Word16 fg_sum[]               /* Q15 */
 );
 
 void g729_Lsp_prev_extract(
   G729_Word16 lsp[M],                 /* Q13 */
   G729_Word16 lsp_ele[M],             /* Q13 */
-  G729_Word16 fg[MA_NP][M],           /* Q15 */
+  const G729_Word16 fg[MA_NP][M],           /* Q15 */
   G729_Word16 freq_prev[MA_NP][M],    /* Q13 */
-  G729_Word16 fg_sum_inv[M]           /* Q12 */
+  const G729_Word16 fg_sum_inv[M]           /* Q12 */
 );
 
 void g729_Lsp_prev_update(
@@ -457,7 +457,7 @@ void  g729_bits2prm_ld8k_compressed(G729_UWord8 bits[], G729_Word16 prm[]);
  *--------------------------------------------------------------------------*/
 
 void g729_Copy(
-  G729_Word16 x[],      /* (i)   : input vector   */
+  const G729_Word16 x[],      /* (i)   : input vector   */
   G729_Word16 y[],      /* (o)   : output vector  */
   G729_Word16 L         /* (i)   : vector length  */
 );

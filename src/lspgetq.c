@@ -37,22 +37,21 @@
  *  All rights reserved.
  */
 
-#include <stdio.h>
 #include "g729a_typedef.h"
 #include "basic_op.h"
 #include "ld8a.h"
 
 
 void g729_Lsp_get_quant(
-  G729_Word16 lspcb1[][M],      /* (i) Q13 : first stage LSP codebook      */
-  G729_Word16 lspcb2[][M],      /* (i) Q13 : Second stage LSP codebook     */
+  const G729_Word16 lspcb1[][M],      /* (i) Q13 : first stage LSP codebook      */
+  const G729_Word16 lspcb2[][M],      /* (i) Q13 : Second stage LSP codebook     */
   G729_Word16 code0,            /* (i)     : selected code of first stage  */
   G729_Word16 code1,            /* (i)     : selected code of second stage */
   G729_Word16 code2,            /* (i)     : selected code of second stage */
-  G729_Word16 fg[][M],          /* (i) Q15 : MA prediction coef.           */
+  const G729_Word16 fg[][M],          /* (i) Q15 : MA prediction coef.           */
   G729_Word16 freq_prev[][M],   /* (i) Q13 : previous LSP vector           */
   G729_Word16 lspq[],           /* (o) Q13 : quantized LSP parameters      */
-  G729_Word16 fg_sum[]          /* (i) Q15 : present MA prediction coef.   */
+  const G729_Word16 fg_sum[]          /* (i) Q15 : present MA prediction coef.   */
 )
 {
   G729_Word16 j;
@@ -152,9 +151,9 @@ void g729_Lsp_expand_1_2(
 void g729_Lsp_prev_compose(
   G729_Word16 lsp_ele[],             /* (i) Q13 : LSP vectors                 */
   G729_Word16 lsp[],                 /* (o) Q13 : quantized LSP parameters    */
-  G729_Word16 fg[][M],               /* (i) Q15 : MA prediction coef.         */
+  const G729_Word16 fg[][M],               /* (i) Q15 : MA prediction coef.         */
   G729_Word16 freq_prev[][M],        /* (i) Q13 : previous LSP vector         */
-  G729_Word16 fg_sum[]               /* (i) Q15 : present MA prediction coef. */
+  const G729_Word16 fg_sum[]               /* (i) Q15 : present MA prediction coef. */
 )
 {
   G729_Word16 j, k;
@@ -177,9 +176,9 @@ void g729_Lsp_prev_compose(
 void g729_Lsp_prev_extract(
   G729_Word16 lsp[M],                /* (i) Q13 : unquantized LSP parameters  */
   G729_Word16 lsp_ele[M],            /* (o) Q13 : target vector               */
-  G729_Word16 fg[MA_NP][M],          /* (i) Q15 : MA prediction coef.         */
+  const G729_Word16 fg[MA_NP][M],          /* (i) Q15 : MA prediction coef.         */
   G729_Word16 freq_prev[MA_NP][M],   /* (i) Q13 : previous LSP vector         */
-  G729_Word16 fg_sum_inv[M]          /* (i) Q12 : inverse previous LSP vector */
+  const G729_Word16 fg_sum_inv[M]          /* (i) Q12 : inverse previous LSP vector */
 )
 {
   G729_Word16 j, k;
@@ -243,7 +242,6 @@ void g729_Lsp_stability(
 
   if( g729_sub(buf[0], L_LIMIT) <0 ) {
     buf[0] = L_LIMIT;
-    printf("lsp_stability warning Low \n");
   }
   for(j=0; j<M-1; j++) {
     L_acc = g729_L_deposit_l( buf[j+1] );
@@ -257,7 +255,6 @@ void g729_Lsp_stability(
 
   if( g729_sub(buf[M-1],M_LIMIT)>0 ) {
     buf[M-1] = M_LIMIT;
-    printf("lsp_stability warning High \n");
   }
   return;
 }

@@ -51,7 +51,7 @@
 
 /* static memory */
 
-static G729_Word16 freq_prev_reset[M] = {  /* Q13:previous LSP vector(init) */
+static const G729_Word16 freq_prev_reset[M] = {  /* Q13:previous LSP vector(init) */
     2339, 4679, 7018, 9358, 11698, 14037, 16377, 18717, 21056, 23396
 };     /* PI*(float)(j+1)/(float)(M+1) */
 
@@ -63,19 +63,19 @@ static void g729_Relspwed(
     G729_Word16 lsp[],                       /* Q13 */
     G729_Word16 wegt[],                      /* normalized */
     G729_Word16 lspq[],                      /* Q13 */
-    G729_Word16 lspcb1[][M],                 /* Q13 */
-    G729_Word16 lspcb2[][M],                 /* Q13 */
-    G729_Word16 fg[MODE][MA_NP][M],          /* Q15 */
+    const G729_Word16 lspcb1[][M],                 /* Q13 */
+    const G729_Word16 lspcb2[][M],                 /* Q13 */
+    const G729_Word16 fg[MODE][MA_NP][M],          /* Q15 */
     G729_Word16 freq_prev[MA_NP][M],         /* Q13 */
-    G729_Word16 fg_sum[MODE][M],             /* Q15 */
-    G729_Word16 fg_sum_inv[MODE][M],         /* Q12 */
+    const G729_Word16 fg_sum[MODE][M],             /* Q15 */
+    const G729_Word16 fg_sum_inv[MODE][M],         /* Q12 */
     G729_Word16 code_ana[]
 );
 
-static void g729_Lsp_pre_select(G729_Word16 rbuf[], G729_Word16 lspcb1[][M], G729_Word16 *cand);
-static void g729_Lsp_select_1(G729_Word16 rbuf[], G729_Word16 lspcb1[], G729_Word16 wegt[], G729_Word16 lspcb2[][M], G729_Word16 *index);
-static void g729_Lsp_select_2( G729_Word16 rbuf[], G729_Word16 lspcb1[], G729_Word16 wegt[], G729_Word16 lspcb2[][M], G729_Word16 *index);
-static void g729_Lsp_get_tdist(G729_Word16 wegt[], G729_Word16 buf[], G729_Word32 *L_tdist, G729_Word16 rbuf[], G729_Word16 fg_sum[]);
+static void g729_Lsp_pre_select(G729_Word16 rbuf[], const G729_Word16 lspcb1[][M], G729_Word16 *cand);
+static void g729_Lsp_select_1(G729_Word16 rbuf[], const G729_Word16 lspcb1[], G729_Word16 wegt[], const G729_Word16 lspcb2[][M], G729_Word16 *index);
+static void g729_Lsp_select_2( G729_Word16 rbuf[], const G729_Word16 lspcb1[], G729_Word16 wegt[], const G729_Word16 lspcb2[][M], G729_Word16 *index);
+static void g729_Lsp_get_tdist(G729_Word16 wegt[], G729_Word16 buf[], G729_Word32 *L_tdist, G729_Word16 rbuf[], const G729_Word16 fg_sum[]);
 static void g729_Lsp_last_select(G729_Word32 L_tdist[], G729_Word16 *mode_index);
 static void g729_Get_wegt(G729_Word16 flsp[], G729_Word16 wegt[]);
 
@@ -130,12 +130,12 @@ static void g729_Relspwed(
     G729_Word16 lsp[],                 /* (i) Q13 : unquantized LSP parameters */
     G729_Word16 wegt[],                /* (i) norm: weighting coefficients     */
     G729_Word16 lspq[],                /* (o) Q13 : quantized LSP parameters   */
-    G729_Word16 lspcb1[][M],           /* (i) Q13 : first stage LSP codebook   */
-    G729_Word16 lspcb2[][M],           /* (i) Q13 : Second stage LSP codebook  */
-    G729_Word16 fg[MODE][MA_NP][M],    /* (i) Q15 : MA prediction coefficients */
+    const G729_Word16 lspcb1[][M],           /* (i) Q13 : first stage LSP codebook   */
+    const G729_Word16 lspcb2[][M],           /* (i) Q13 : Second stage LSP codebook  */
+    const G729_Word16 fg[MODE][MA_NP][M],    /* (i) Q15 : MA prediction coefficients */
     G729_Word16 freq_prev[MA_NP][M],   /* (i) Q13 : previous LSP vector        */
-    G729_Word16 fg_sum[MODE][M],       /* (i) Q15 : present MA prediction coef.*/
-    G729_Word16 fg_sum_inv[MODE][M],   /* (i) Q12 : inverse coef.              */
+    const G729_Word16 fg_sum[MODE][M],       /* (i) Q15 : present MA prediction coef.*/
+    const G729_Word16 fg_sum_inv[MODE][M],   /* (i) Q12 : inverse coef.              */
     G729_Word16 code_ana[]             /* (o)     : codes of the selected LSP  */
 )
 {
@@ -191,7 +191,7 @@ static void g729_Relspwed(
 
 static void g729_Lsp_pre_select(
     G729_Word16 rbuf[],              /* (i) Q13 : target vetor             */
-    G729_Word16 lspcb1[][M],         /* (i) Q13 : first stage LSP codebook */
+    const G729_Word16 lspcb1[][M],         /* (i) Q13 : first stage LSP codebook */
     G729_Word16 *cand                /* (o)     : selected code            */
 )
 {
@@ -223,9 +223,9 @@ static void g729_Lsp_pre_select(
 
 static void g729_Lsp_select_1(
     G729_Word16 rbuf[],                   /* (i) Q13 : target vector             */
-    G729_Word16 lspcb1[],            /* (i) Q13 : first stage lsp codebook  */
+    const G729_Word16 lspcb1[],            /* (i) Q13 : first stage lsp codebook  */
     G729_Word16 wegt[],                   /* (i) norm: weighting coefficients    */
-    G729_Word16 lspcb2[][M],         /* (i) Q13 : second stage lsp codebook */
+    const G729_Word16 lspcb2[][M],         /* (i) Q13 : second stage lsp codebook */
     G729_Word16 *index                    /* (o)     : selected codebook index   */
 )
 {
@@ -261,9 +261,9 @@ static void g729_Lsp_select_1(
 
 static void g729_Lsp_select_2(
     G729_Word16 rbuf[],              /* (i) Q13 : target vector             */
-    G729_Word16 lspcb1[],            /* (i) Q13 : first stage lsp codebook  */
+    const G729_Word16 lspcb1[],            /* (i) Q13 : first stage lsp codebook  */
     G729_Word16 wegt[],              /* (i) norm: weighting coef.           */
-    G729_Word16 lspcb2[][M],         /* (i) Q13 : second stage lsp codebook */
+    const G729_Word16 lspcb2[][M],         /* (i) Q13 : second stage lsp codebook */
     G729_Word16 *index               /* (o)     : selected codebook index   */
 )
 {
@@ -302,7 +302,7 @@ static void g729_Lsp_get_tdist(
     G729_Word16 buf[],           /* (i) Q13 : candidate LSP vector        */
     G729_Word32 *L_tdist,        /* (o) Q27 : distortion                  */
     G729_Word16 rbuf[],          /* (i) Q13 : target vector               */
-    G729_Word16 fg_sum[]         /* (i) Q15 : present MA prediction coef. */
+    const G729_Word16 fg_sum[]         /* (i) Q15 : present MA prediction coef. */
 )
 {
     G729_Word16 j;

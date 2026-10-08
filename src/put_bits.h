@@ -27,7 +27,6 @@
 #define AVCODEC_PUT_BITS_H
 
 #include <stdint.h>
-#include <stdlib.h>
 #include <assert.h>
 //#include "libavutil/bswap.h"
 #define HAVE_ARMV6 1
@@ -175,13 +174,11 @@ static inline void put_bits(PutBitContext *s, int n, unsigned int value)
   unsigned int bit_buf;
   int bit_left;
   
-  //    printf("put_bits=%d %x\n", n, value);
   assert(n == 32 || value < (1U << n));
   
   bit_buf = s->bit_buf;
   bit_left = s->bit_left;
   
-  //    printf("n=%d value=%x cnt=%d buf=%x\n", n, value, bit_cnt, bit_buf);
   /* XXX: optimize */
 #ifdef BITSTREAM_WRITER_LE
   bit_buf |= value << (32 - bit_left);
@@ -210,7 +207,6 @@ static inline void put_bits(PutBitContext *s, int n, unsigned int value)
     } else
 #endif
       *(uint32_t *)s->buf_ptr = be2me_32(bit_buf);
-    //printf("bitbuf = %08x\n", bit_buf);
     s->buf_ptr+=4;
     bit_left+=32 - n;
     bit_buf = value;
@@ -249,7 +245,6 @@ static inline void put_bits(PutBitContext *s, int n, unsigned int value)
   
   ptr[0] |= be2me_32(value>>(index&31));
   ptr[1]  = be2me_32(value<<(32-(index&31)));
-  //if(n>24) printf("%d %d\n", n, value);
   index+= n;
   s->index= index;
 #        endif
@@ -277,7 +272,6 @@ static inline void put_bits(PutBitContext *s, int n, unsigned int value)
   
   ptr[0] |= be2me_32(value<<(32-n-(index&7) ));
   ptr[1] = 0;
-  //if(n>24) printf("%d %d\n", n, value);
   index+= n;
   s->index= index;
 #        endif

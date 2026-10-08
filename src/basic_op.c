@@ -49,8 +49,6 @@
  |___________________________________________________________________________|
  */
 
-#include <stdio.h>
-#include <stdlib.h>
 #include "g729a_typedef.h"
 #include "basic_op.h"
 
@@ -1566,14 +1564,14 @@ G729_Word16 g729_div_s(G729_Word16 var1, G729_Word16 var2)
     
     if ((var1 > var2) || (var1 < 0) || (var2 < 0))
     {
-        printf("Division Error var1=%d  var2=%d\n",var1,var2);
-        exit(0);
+        /* Invalid operands: saturate to the largest Q15 value matching the dividend's sign. */
+        return (var1 < 0) ? G729A_MIN_16 : G729A_MAX_16;
     }
     
     if (var2 == 0)
     {
-        printf("Division by 0, Fatal error \n");
-        exit(0);
+        /* Division by zero: same saturation, keeps the library free of stdio. */
+        return (var1 < 0) ? G729A_MIN_16 : G729A_MAX_16;
     }
     
     if (var1 == 0)

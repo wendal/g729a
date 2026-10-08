@@ -61,7 +61,8 @@ void g729_Pred_lt_3(
 )
 {
     G729_Word16  i, j, k;
-    G729_Word16  *x0, *x1, *x2, *c1, *c2;
+    G729_Word16  *x0, *x1, *x2;
+    const G729_Word16  *c1, *c2;
     G729_Word32  s;
     
     x0 = &exc[-T0];
