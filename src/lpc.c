@@ -83,10 +83,7 @@ void g729_Autocorr(
     G729_Word16 y[L_WINDOW];
     G729_Word32 sum;
     
-    /* add '#if' to avoid warning(-Wunused-variable) */
-#if !defined(USE_GLOBAL_OVERFLOW_FLAG) || (USE_GLOBAL_OVERFLOW_FLAG != 1)
     G729_Flag overflow;
-#endif
     
     /* Windowing of signal */
     
@@ -100,11 +97,6 @@ void g729_Autocorr(
     do {
         sum = 1;    /* Avoid case of all zeros */
 
-#if defined(USE_GLOBAL_OVERFLOW_FLAG) && (USE_GLOBAL_OVERFLOW_FLAG == 1)
-        G729A_Overflow_Flag = 0;
-        for(i=0; i<L_WINDOW; i++)
-            sum = g729_L_mac(sum, y[i], y[i]);
-#else
         overflow = 0;
         for ( i = 0; i < L_WINDOW; ++i)
         {
@@ -115,25 +107,16 @@ void g729_Autocorr(
                 break;
             }
         }
-#endif
         /* If overflow divide y[] by 4 */
         
-#if defined(USE_GLOBAL_OVERFLOW_FLAG) && (USE_GLOBAL_OVERFLOW_FLAG == 1)
-        if(G729A_Overflow_Flag != 0)
-#else
         if(overflow != 0)
-#endif
         {
             for(i=0; i<L_WINDOW; i++)
             {
                 y[i] = g729_shr(y[i], 2);
             }
         }
-#if defined(USE_GLOBAL_OVERFLOW_FLAG) && (USE_GLOBAL_OVERFLOW_FLAG == 1)
-    }while (G729A_Overflow_Flag != 0);
-#else
     }while (overflow != 0);
-#endif
     
     /* Normalization of r[0] */
     
@@ -255,11 +238,6 @@ void g729_Lag_window(
  */
 
 
-/* Last A(z) for case of unstable filter */
-
-static G729_Word16 old_A[M+1]={4096,0,0,0,0,0,0,0,0,0,0};
-static G729_Word16 old_rc[2]={0,0};
-
 void g729_Levinson(
     G729_Word16 Rh[],      /* (i)     : Rh[M+1] Vector of autocorrelations (msb) */
     G729_Word16 Rl[],      /* (i)     : Rl[M+1] Vector of autocorrelations (lsb) */
@@ -328,19 +306,6 @@ void g729_Levinson(
         g729_L_Extract(t2, &Kh, &Kl);           /* K in DPF                        */
         rc[i-1] = Kh;
         
-        /* Test for unstable filter. If unstable keep old A(z) */
-        
-        if (g729_sub(g729_abs_s(Kh), 32750) > 0)
-        {
-            for(j=0; j<=M; j++)
-            {
-                A[j] = old_A[j];
-            }
-            rc[0] = old_rc[0];        /* only two rc coefficients are needed */
-            rc[1] = old_rc[1];
-            return;
-        }
-        
         /*------------------------------------------*
          *  Compute new LPC coeff. -> An[i]         *
          *  An[j]= A[j] + K*A[i-j]     , j=1 to i-1 *
@@ -387,10 +352,8 @@ void g729_Levinson(
     for(i=1; i<=M; i++)
     {
         t0   = g729_L_Comp(Ah[i], Al[i]);
-        old_A[i] = A[i] = g729_round(g729_L_shl(t0, 1));
+        A[i] = g729_round(g729_L_shl(t0, 1));
     }
-    old_rc[0] = rc[0];
-    old_rc[1] = rc[1];
     
     return;
 }
@@ -423,10 +386,7 @@ void g729_Az_lsp(
     G729_Flag   ovf_coef;
     G729_Word16 (*pChebps)(G729_Word16 x, G729_Word16 f[], G729_Word16 n);
     
-    /* add '#if' to avoid warning(-Wunused-variable) */
-#if !defined(USE_GLOBAL_OVERFLOW_FLAG) || (USE_GLOBAL_OVERFLOW_FLAG != 1)
     G729_Word32 L_temp1, L_temp2;
-#endif
     
     /*-------------------------------------------------------------*
      *  find the sum and diff. pol. F1(z) and F2(z)                *
@@ -447,44 +407,6 @@ void g729_Az_lsp(
     
     f1[0] = 2048;          /* f1[0] = 1.0 is in Q11 */
     f2[0] = 2048;          /* f2[0] = 1.0 is in Q11 */
-    
-#if defined(USE_GLOBAL_OVERFLOW_FLAG) && (USE_GLOBAL_OVERFLOW_FLAG == 1)
-    for (i = 0; i< NC; i++)
-    {
-        G729A_Overflow_Flag = 0;
-        t0 = g729_L_mult(a[i+1], 16384);          /* x = (a[i+1] + a[M-i]) >> 1        */
-        t0 = g729_L_mac(t0, a[M-i], 16384);       /*    -> From Q12 to Q11             */
-        x  = g729_extract_h(t0);
-        if ( G729A_Overflow_Flag )
-        {
-            ovf_coef = 1;
-        }
-        
-        G729A_Overflow_Flag = 0;
-        f1[i+1] = g729_sub(x, f1[i]);    /* f1[i+1] = a[i+1] + a[M-i] - f1[i] */
-        if ( G729A_Overflow_Flag )
-        {
-            ovf_coef = 1;
-        }
-        
-        G729A_Overflow_Flag = 0;
-        t0 = g729_L_mult(a[i+1], 16384);          /* x = (a[i+1] - a[M-i]) >> 1        */
-        t0 = g729_L_msu(t0, a[M-i], 16384);       /*    -> From Q12 to Q11             */
-        x  = g729_extract_h(t0);
-        if ( G729A_Overflow_Flag )
-        {
-            ovf_coef = 1;
-        }
-        
-        G729A_Overflow_Flag = 0;
-        f2[i+1] = g729_add(x, f2[i]);    /* f2[i+1] = a[i+1] - a[M-i] + f2[i] */
-        if ( G729A_Overflow_Flag )
-        {
-            ovf_coef = 1;
-        }
-    }
-    
-#else
     
     for (i = 0; i< NC; i++)
     {
@@ -510,7 +432,6 @@ void g729_Az_lsp(
         }
         f2[i+1] = (G729_Word16)L_temp2;
     }
-#endif
     
     if ( ovf_coef ) {
         /*printf("===== OVF ovf_coef =====\n");*/

@@ -96,10 +96,7 @@ G729_Word16 g729_Pitch_ol_fast(  /* output: open loop pitch lag                 
     G729_Word16 scaled_signal[L_FRAME+PIT_MAX];
     G729_Word16 *scal_sig;
     
-    /* add '#if' to avoid warning(-Wunused-variable) */
-#if !defined(USE_GLOBAL_OVERFLOW_FLAG) || (USE_GLOBAL_OVERFLOW_FLAG != 1)
     G729_Flag overflow;
-#endif
     
     scal_sig = &scaled_signal[pit_max];
     
@@ -108,14 +105,6 @@ G729_Word16 g729_Pitch_ol_fast(  /* output: open loop pitch lag                 
      *--------------------------------------------------------*/
     
     sum = 0;
-    
-#if defined(USE_GLOBAL_OVERFLOW_FLAG) && (USE_GLOBAL_OVERFLOW_FLAG == 1)
-    
-    G729A_Overflow_Flag = 0;
-    for(i= -pit_max; i< L_frame; i+=2)
-        sum = g729_L_mac(sum, signal[i], signal[i]);
-    
-#else
     
     overflow = 0;
     for ( i = -pit_max; i < L_frame; i += 2 )
@@ -128,7 +117,6 @@ G729_Word16 g729_Pitch_ol_fast(  /* output: open loop pitch lag                 
             break;
         }
     }
-#endif
     
     /* Anyway, sum MUST be positive */
     
@@ -140,11 +128,7 @@ G729_Word16 g729_Pitch_ol_fast(  /* output: open loop pitch lag                 
      *   else               -> scal_sig[i] = signal[i]        *
      *--------------------------------------------------------*/
     
-#if defined(USE_GLOBAL_OVERFLOW_FLAG) && (USE_GLOBAL_OVERFLOW_FLAG == 1)
-    if(G729A_Overflow_Flag == 1)
-#else
     if(overflow == 1)
-#endif
     {
         for(i=-pit_max; i<L_frame; i++)
         {
@@ -470,11 +454,8 @@ G729_Word16 g729_G_pitch(   /* (o) Q14 : Gain of pitch lag saturated to 1.2     
     
     G729_Word16 scaled_y1[L_SUBFR];
     
-    /* add '#if' to avoid warning(-Wunused-variable) */
-#if !defined(USE_GLOBAL_OVERFLOW_FLAG) || (USE_GLOBAL_OVERFLOW_FLAG != 1)
     G729_Word32 s1, L_temp;
     G729_Flag overflow;
-#endif
     
     /* divide "y1[]" by 4 to avoid overflow */
     
@@ -485,14 +466,6 @@ G729_Word16 g729_G_pitch(   /* (o) Q14 : Gain of pitch lag saturated to 1.2     
     
     s = 1;                    /* Avoid case of all zeros */
 
-#if defined(USE_GLOBAL_OVERFLOW_FLAG) && (USE_GLOBAL_OVERFLOW_FLAG == 1)
-
-    G729A_Overflow_Flag = 0;
-    for(i=0; i<L_subfr; i++)
-        s = g729_L_mac(s, y1[i], y1[i]);
-
-#else
-    
     overflow = 0;
     for ( i = 0; i < L_subfr; ++i )
     {
@@ -503,13 +476,8 @@ G729_Word16 g729_G_pitch(   /* (o) Q14 : Gain of pitch lag saturated to 1.2     
             break;
         }
     }
-#endif
     
-#if defined(USE_GLOBAL_OVERFLOW_FLAG) && (USE_GLOBAL_OVERFLOW_FLAG == 1)
-    if (G729A_Overflow_Flag == 0)
-#else
     if (overflow == 0)
-#endif
     {
         exp_yy = g729_norm_l(s);
         yy     = g729_round( g729_L_shl(s, exp_yy) );
@@ -527,14 +495,6 @@ G729_Word16 g729_G_pitch(   /* (o) Q14 : Gain of pitch lag saturated to 1.2     
     /* Compute scalar product <xn[],y1[]> */
     
     s = 0;
-    
-#if defined(USE_GLOBAL_OVERFLOW_FLAG) && (USE_GLOBAL_OVERFLOW_FLAG == 1)
-    
-    G729A_Overflow_Flag = 0;
-    for(i=0; i<L_subfr; i++)
-        s = g729_L_mac(s, xn[i], y1[i]);
-
-#else
     
     overflow = 0;
     for ( i = 0; i < L_subfr; ++i )
@@ -555,13 +515,8 @@ G729_Word16 g729_G_pitch(   /* (o) Q14 : Gain of pitch lag saturated to 1.2     
             break;
         }
     }
-#endif
     
-#if defined(USE_GLOBAL_OVERFLOW_FLAG) && (USE_GLOBAL_OVERFLOW_FLAG == 1)
-    if (G729A_Overflow_Flag == 0)
-#else
     if (overflow == 0)
-#endif
     {
         exp_xy = g729_norm_l(s);
         xy     = g729_round( g729_L_shl(s, exp_xy) );

@@ -467,7 +467,7 @@ void g729_Set_zero(
   G729_Word16 L          /* (i)    : length of vector    */
 );
 
-G729_Word16 g729_Random(void);
+G729_Word16 g729_Random(G729_Word16 *seed);
     
 #ifdef __cplusplus
 }

@@ -52,10 +52,6 @@
 #define G729A_MAX_16 (G729_Word16)0x7fff
 #define G729A_MIN_16 (G729_Word16)0x8000
 
-#if defined(USE_GLOBAL_OVERFLOW_FLAG) && (USE_GLOBAL_OVERFLOW_FLAG == 1)
-extern G729_Flag G729A_Overflow_Flag;
-#endif
-
 /*___________________________________________________________________________
  |                                                                           |
  |   Operators prototypes                                                    |

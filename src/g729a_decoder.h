@@ -109,6 +109,8 @@ typedef struct _g729a_decoder_state
     G729_Word16 old_T0;          /* integer delay of previous frame    */
     G729_Word16 gain_code;       /* Code gain                          */
     G729_Word16 gain_pitch;      /* Pitch gain                         */
+    G729_Word16 random_seed;     /* Seed for the random generator      */
+    G729_Word16 bad_lsf;         /* Bad LSF indicator                  */
     
     G729_Word16 synth_buf[L_FRAME + M];
     G729_Word16 *synth;

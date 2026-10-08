@@ -62,11 +62,6 @@
 
 /* G729_Flag Carry =0; */
 
-#if !defined(USE_GLOBAL_OVERFLOW_FLAG) || (USE_GLOBAL_OVERFLOW_FLAG != 1)
-static
-#endif
-G729_Flag G729A_Overflow_Flag = 0;
-
 /*___________________________________________________________________________
  |                                                                           |
  |   Local Functions                                                         |
@@ -105,17 +100,14 @@ static G729_Word16 g729_sature(G729_Word32 L_var1)
     
     if (L_var1 > 0X00007fffL)
     {
-        G729A_Overflow_Flag = 1;
         var_out = G729A_MAX_16;
     }
     else if (L_var1 < (G729_Word32)0xffff8000L)
     {
-        G729A_Overflow_Flag = 1;
         var_out = G729A_MIN_16;
     }
     else
     {
-        G729A_Overflow_Flag = 0;
         var_out = g729_extract_l(L_var1);
     }
     
@@ -714,7 +706,6 @@ G729_Word16 g729_shl(G729_Word16 var1, G729_Word16 var2)
         resultat = (G729_Word32) var1 * ((G729_Word32) 1 << var2);
         if ((var2 > 15 && var1 != 0) || (resultat != (G729_Word32)((G729_Word16) resultat)))
         {
-            G729A_Overflow_Flag = 1;
             var_out = (var1 > 0) ? G729A_MAX_16 : G729A_MIN_16;
         }
         else
@@ -886,7 +877,6 @@ G729_Word32 g729_L_add(G729_Word32 L_var1, G729_Word32 L_var2)
         if ((L_var_out ^ L_var1) & G729A_MIN_32)
         {
             L_var_out = (L_var1 < 0) ? G729A_MIN_32 : G729A_MAX_32;
-            G729A_Overflow_Flag = 1;
         }
     }
     return(L_var_out);
@@ -935,7 +925,6 @@ G729_Word32 g729_L_sub(G729_Word32 L_var1, G729_Word32 L_var2)
         if ((L_var_out ^ L_var1) & G729A_MIN_32)
         {
             L_var_out = (L_var1 < 0L) ? G729A_MIN_32 : G729A_MAX_32;
-            G729A_Overflow_Flag = 1;
         }
     }
     return(L_var_out);
@@ -992,7 +981,6 @@ G729_Word32 g729_L_shl(G729_Word32 L_var1, G729_Word16 var2)
         {
             if (L_var1 > (G729_Word32) 0X3fffffffL)
             {
-                G729A_Overflow_Flag = 1;
                 L_var_out = G729A_MAX_32;
                 break;
             }
@@ -1000,7 +988,6 @@ G729_Word32 g729_L_shl(G729_Word32 L_var1, G729_Word16 var2)
             {
                 if (L_var1 < (G729_Word32) 0xc0000000L)
                 {
-                    G729A_Overflow_Flag = 1;
                     L_var_out = G729A_MIN_32;
                     break;
                 }
@@ -1121,7 +1108,6 @@ G729_Word32 g729_L_mult(G729_Word16 var1, G729_Word16 var2)
     }
     else
     {
-        G729A_Overflow_Flag = 1;
         L_var_out = G729A_MAX_32;
     }
     

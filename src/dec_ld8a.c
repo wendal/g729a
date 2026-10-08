@@ -245,8 +245,8 @@ void g729_Decod_ld8a(
         if(bfi != 0)        /* Bad frame */
         {
             
-            parm[0] = g729_Random() & (G729_Word16)0x1fff;     /* 13 bits random */
-            parm[1] = g729_Random() & (G729_Word16)0x000f;     /*  4 bits random */
+            parm[0] = g729_Random(&(state->random_seed)) & (G729_Word16)0x1fff;     /* 13 bits random */
+            parm[1] = g729_Random(&(state->random_seed)) & (G729_Word16)0x000f;     /*  4 bits random */
         }
         g729_Decod_ACELP(parm[1], parm[0], code);
         parm +=2;
@@ -291,13 +291,7 @@ void g729_Decod_ld8a(
             state->exc[i+i_subfr] = g729_round(L_temp);
         }
         
-#if defined(USE_GLOBAL_OVERFLOW_FLAG) && (USE_GLOBAL_OVERFLOW_FLAG == 1)
-        G729A_Overflow_Flag = 0;
-        g729_Syn_filt(Az, &(state->exc[i_subfr]), &synth[i_subfr], L_SUBFR, state->mem_syn, 0);
-        if(G729A_Overflow_Flag != 0)
-#else
         if (g729_Syn_filt_Overflow(Az, &(state->exc[i_subfr]), &synth[i_subfr], L_SUBFR, state->mem_syn))
-#endif
         {
             /* In case of overflow in the synthesis          */
             /* -> Scale down vector exc[] and redo synthesis */

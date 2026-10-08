@@ -113,6 +113,9 @@ G729_Word32 G729A_Decoder_Init(G729A_Enc_state decState)
     g729_Set_zero(state->synth_buf, M);
     state->synth = state->synth_buf + M;
     
+    state->random_seed = 21845;
+    state->bad_lsf = 0;
+    
     g729_Init_Decod_ld8a(state);
     g729_Init_Post_Filter(&(state->post_filter_state));
     g729_Init_Post_Process(&(state->post_process_state));
@@ -122,8 +125,6 @@ G729_Word32 G729A_Decoder_Init(G729A_Enc_state decState)
 
 G729_Word32 G729A_Decoder_Process(G729A_Dec_state decState, G729_UWord8 * inData, G729_Word16 * speechOut)
 {
-    static G729_Word16 bad_lsf = 0;          /* Initialize bad LSF indicator */
-    
     G729_Word16  parm[PRM_SIZE+1];           /* Synthesis parameters        */
     G729_Word16  Az_dec[MP1*2];              /* Decoded Az for post-filter  */
     G729_Word16  T2[2];                      /* Pitch lag for 2 subframes   */
@@ -140,7 +141,7 @@ G729_Word32 G729A_Decoder_Process(G729A_Dec_state decState, G729_UWord8 * inData
     /* check pitch parity and put 1 in parm[4] if parity error */
     parm[4] = g729_Check_Parity_Pitch(parm[3], parm[4]);
     
-    g729_Decod_ld8a(state, parm, state->synth, Az_dec, T2, bad_lsf);
+    g729_Decod_ld8a(state, parm, state->synth, Az_dec, T2, state->bad_lsf);
     g729_Post_Filter(&(state->post_filter_state), state->synth, Az_dec, T2);
     g729_Post_Process(&(state->post_process_state), state->synth, speechOut, L_FRAME);
     
@@ -189,8 +190,6 @@ G729_Word32 G729A_Encoder_Process_Testing(G729A_Enc_state encState, G729_Word16 
 
 G729_Word32 G729A_Decoder_Process_Testing(G729A_Dec_state decState, G729_Word16 * inData, G729_Word16 * speechOut)
 {
-    static G729_Word16 bad_lsf = 0;          /* Initialize bad LSF indicator */
-    
     G729_Word16 i;
     G729_Word16 parm[PRM_SIZE+1];           /* Synthesis parameters        */
     G729_Word16 Az_dec[MP1*2];              /* Decoded Az for post-filter  */
@@ -212,7 +211,7 @@ G729_Word32 G729A_Decoder_Process_Testing(G729A_Dec_state decState, G729_Word16 
     /* check pitch parity and put 1 in parm[4] if parity error */
     parm[4] = g729_Check_Parity_Pitch(parm[3], parm[4]);
     
-    g729_Decod_ld8a(state, parm, state->synth, Az_dec, T2, bad_lsf);
+    g729_Decod_ld8a(state, parm, state->synth, Az_dec, T2, state->bad_lsf);
     g729_Post_Filter(&(state->post_filter_state), state->synth, Az_dec, T2);
     g729_Post_Process(&(state->post_process_state), state->synth, speechOut, L_FRAME);
     
