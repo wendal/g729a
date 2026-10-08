@@ -166,7 +166,7 @@ void g729_prm2bits_ld8k_compressed(
     G729_BitWriter bw;
     int i;
 
-    g729_bit_writer_init(&bw, bits, 10);
+    g729_bit_writer_init(&bw, bits, 10);  /* 80 bits = 10 bytes */
 
     for (i = 0; i < PRM_SIZE; ++i)
     {
@@ -183,7 +183,7 @@ void g729_bits2prm_ld8k_compressed(
     G729_BitReader br;
     int i;
 
-    g729_bit_reader_init(&br, bits, 10);
+    g729_bit_reader_init(&br, bits, 10);  /* 80 bits = 10 bytes */
 
     for (i = 0; i < PRM_SIZE; ++i)
     {

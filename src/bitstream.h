@@ -36,8 +36,11 @@
  *     byte 0, the next one in bit 6, and so on.
  *   - g729_put_bits() appends the low n bits of value, most significant of
  *     those n bits first.  Bits of value above bit n-1 are masked off.
+ *     Precondition: 1 <= n <= 32.
  *   - g729_flush_bits() zero-pads the stream to the next byte boundary.
- *     Bits of the final byte that were never written read as zero.
+ *     Bits of the final byte that were never written read as zero; bytes
+ *     past the flushed position are left untouched (provide a zeroed
+ *     buffer if the whole output must be defined).
  *   - g729_get_bits() returns the next n bits as an unsigned integer whose
  *     most significant bit is the first bit read, and advances the read
  *     position by n.  Bits beyond the end of the buffer read as zero.
