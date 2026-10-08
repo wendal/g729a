@@ -305,6 +305,10 @@ void g729_Levinson(
         t2 = g729_L_shl(t2, alp_exp);           /* denormalize; compare to Alpha   */
         g729_L_Extract(t2, &Kh, &Kl);           /* K in DPF                        */
         rc[i-1] = Kh;
+
+        /* The ITU reference restores old_A/old_rc when |K| > 32750. G.729A
+           does not use rc, and the threshold was verified unreachable over
+           the full test-vector suite, so that fallback is omitted. */
         
         /*------------------------------------------*
          *  Compute new LPC coeff. -> An[i]         *

@@ -52,6 +52,12 @@
 #define G729A_MAX_16 (G729_Word16)0x7fff
 #define G729A_MIN_16 (G729_Word16)0x8000
 
+/* Overflow is always tracked via local variables; the old global flag
+   mechanism was removed. Fail loudly if a stale build defines it. */
+#if defined(USE_GLOBAL_OVERFLOW_FLAG)
+#error "USE_GLOBAL_OVERFLOW_FLAG is no longer supported"
+#endif
+
 /*___________________________________________________________________________
  |                                                                           |
  |   Operators prototypes                                                    |
