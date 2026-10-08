@@ -1,0 +1,47 @@
+name: CI
+
+on:
+  push:
+    branches: [master, modernize]
+  pull_request:
+
+jobs:
+  test-vectors:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Configure (ITU test format)
+        run: cmake -B build -DG729A_ITU_TEST_FORMAT=ON -DCMAKE_BUILD_TYPE=Release
+
+      - name: Build
+        run: cmake --build build --config Release
+
+      - name: Run test vectors (bit-exact)
+        shell: bash
+        run: bash tests/run_vectors.sh build
+
+  smoke-default-format:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Configure (default 10-byte format)
+        run: cmake -B build -DCMAKE_BUILD_TYPE=Release
+
+      - name: Build
+        run: cmake --build build
+
+      - name: Encode/decode roundtrip
+        run: |
+          ./build/coder test_vectors/IN/SPEECH.IN /tmp/out.bit
+          ./build/decoder /tmp/out.bit /tmp/out.pcm
+          # 600064 bytes in -> 3750 frames -> 37500 bytes bitstream -> 600000 bytes pcm
+          test "$(stat -c%s /tmp/out.bit)" -eq 37500
+          test "$(stat -c%s /tmp/out.pcm)" -eq 600000
+          # output must not be all zeros
+          od -An -tx1 /tmp/out.pcm | tr -d ' 0\n' | grep -q .
