@@ -65,6 +65,10 @@
 #include "basic_op.h"
 #include "ld8a.h"
 
+#include "vad.h"
+#include "dtx.h"
+#include "tab_dtx.h"
+
 #include "g729a_errors.h"
 #include "g729a_encoder.h"
 
@@ -153,6 +157,15 @@ void g729_Init_Coder_ld8a(g729a_encoder_state * state)
     g729_Init_exc_err(&(state->taming_state));
     
     /* Annex B (VAD/DTX/CNG) */
+    state->pastVad  = 1;
+    state->ppastVad = 1;
+    state->seed     = INIT_SEED;
+    state->old_A[0] = 4096;
+    for ( i = 1; i < MP1; ++i ) state->old_A[i] = 0;
+    state->old_rc[0] = 0;
+    state->old_rc[1] = 0;
+    state->vad_enable = 0;
+    state->frame      = 0;
     g729_Init_Vad(&(state->vad_state));
     g729_Init_Cod_cng(&(state->dtx_state));
     
@@ -180,7 +193,11 @@ void g729_Init_Coder_ld8a(g729a_encoder_state * state)
 
 void g729_Coder_ld8a(
     g729a_encoder_state * state,
-    G729_Word16 ana[]       /* output  : Analysis parameters */
+    G729_Word16 ana[],       /* output  : Analysis parameters;
+                                ana[0] = frame type: 1 voice, 2 SID,
+                                0 untransmitted (Annex B)              */
+    G729_Word16 frame,       /* input   : frame counter (Annex B VAD)  */
+    G729_Word16 vad_enable   /* input   : VAD enable flag (Annex B)    */
 )
 {
     
@@ -224,16 +241,89 @@ void g729_Coder_ld8a(
      *------------------------------------------------------------------------*/
     {
         /* Temporary vectors */
-        G729_Word16 r_l[MP1], r_h[MP1];       /* Autocorrelations low and hi          */
+        G729_Word16 r_l[NP+1], r_h[NP+1];     /* Autocorrelations low and hi          */
         G729_Word16 rc[M];                    /* Reflection coefficients.             */
         G729_Word16 lsp_new[M], lsp_new_q[M]; /* LSPs at 2th subframe                 */
         
+        /* For G.729B */
+        G729_Word16 rh_nbe[MP1];
+        G729_Word16 lsf_new[M];
+        G729_Word16 exp_R0, Vad;
+        
         /* LP analysis */
         
-        g729_Autocorr(state->p_window, M, r_h, r_l);       /* Autocorrelations */
-        g729_Lag_window(M, r_h, r_l);                      /* Lag windowing    */
-        g729_Levinson(r_h, r_l, Ap_t, rc);                 /* g729_Levinson Durbin  */
-        g729_Az_lsp(Ap_t, lsp_new, state->lsp_old);        /* From A(z) to lsp */
+        g729_Autocorr(state->p_window, NP, r_h, r_l, &exp_R0);  /* Autocorrelations */
+        g729_Copy(r_h, rh_nbe, MP1);
+        g729_Lag_window(NP, r_h, r_l);                      /* Lag windowing    */
+        g729_Levinson(r_h, r_l, Ap_t, rc, &temp,
+                      state->old_A, state->old_rc);         /* g729_Levinson Durbin  */
+        g729_Az_lsp(Ap_t, lsp_new, state->lsp_old);         /* From A(z) to lsp */
+        
+        /* For G.729B */
+        /* ------ VAD ------- */
+        g729_Lsp_lsf(lsp_new, lsf_new, M);
+        g729_Vad(&(state->vad_state), rc[1], lsf_new, r_h, r_l, exp_R0,
+                 state->p_window, frame, state->pastVad, state->ppastVad, &Vad);
+        
+        g729_Update_cng(&(state->dtx_state), rh_nbe, exp_R0, Vad);
+        
+        /* ---------------------- */
+        /* Case of Inactive frame */
+        /* ---------------------- */
+        
+        if ((Vad == 0) && (vad_enable == 1)){
+            
+            g729_Cod_cng(&(state->dtx_state), state->exc, state->pastVad,
+                         state->lsp_old_q, Aq_t, ana,
+                         state->lspenc_state.freq_prev, &(state->seed),
+                         &(state->taming_state), state->old_A, state->old_rc);
+            state->ppastVad = state->pastVad;
+            state->pastVad = Vad;
+            
+            /* Update wsp, mem_w and mem_w0 */
+            Aq = Aq_t;
+            for(i_subfr=0; i_subfr < L_FRAME; i_subfr += L_SUBFR) {
+                
+                /* Residual signal in xn */
+                g729_Residu(Aq, &(state->speech[i_subfr]), xn, L_SUBFR);
+                
+                g729_Weight_Az(Aq, GAMMA1, M, Ap_t);
+                
+                /* Compute wsp and mem_w */
+                Ap = Ap_t + MP1;
+                Ap[0] = 4096;
+                for(i=1; i<=M; i++)    /* Ap[i] = Ap_t[i] - 0.7 * Ap_t[i-1]; */
+                    Ap[i] = g729_sub(Ap_t[i], g729_mult(Ap_t[i-1], 22938));
+                g729_Syn_filt(Ap, xn, &(state->wsp[i_subfr]), L_SUBFR, state->mem_w, 1);
+                
+                /* Compute mem_w0 */
+                for(i=0; i<L_SUBFR; i++) {
+                    xn[i] = g729_sub(xn[i], state->exc[i_subfr+i]);  /* residu[] - exc[] */
+                }
+                g729_Syn_filt(Ap_t, xn, xn, L_SUBFR, state->mem_w0, 1);
+                
+                Aq += MP1;
+            }
+            
+            state->sharp = SHARPMIN;
+            
+            /* Update memories for next frames */
+            g729_Copy(&(state->old_speech[L_FRAME]), &(state->old_speech[0]), L_TOTAL-L_FRAME);
+            g729_Copy(&(state->old_wsp[L_FRAME]), &(state->old_wsp[0]), PIT_MAX);
+            g729_Copy(&(state->old_exc[L_FRAME]), &(state->old_exc[0]), PIT_MAX+L_INTERPOL);
+            
+            return;
+        }  /* End of inactive frame case */
+        
+        
+        /* -------------------- */
+        /* Case of Active frame */
+        /* -------------------- */
+        
+        *ana++ = 1;
+        state->seed = INIT_SEED;
+        state->ppastVad = state->pastVad;
+        state->pastVad = Vad;
         
         /* LSP quantization */
         

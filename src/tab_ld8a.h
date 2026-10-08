@@ -45,8 +45,8 @@ extern "C" {
 #endif
     
 extern const G729_Word16 g729_hamwindow[L_WINDOW];
-extern const G729_Word16 g729_lag_h[M];
-extern const G729_Word16 g729_lag_l[M];
+extern const G729_Word16 g729_lag_h[M+2]; /* M+2: Annex B VAD uses NP=M+2 */
+extern const G729_Word16 g729_lag_l[M+2];
 extern const G729_Word16 g729_table[65];
 extern const G729_Word16 g729_slope[64];
 extern const G729_Word16 g729_table2[64];
@@ -71,6 +71,7 @@ extern const G729_Word16 g729_thr2[NCODE2-NCAN2];
 extern const G729_Word16 g729_imap1[NCODE1];
 extern const G729_Word16 g729_imap2[NCODE2];
 extern const G729_Word16 g729_bitsno[PRM_SIZE];
+extern const G729_Word16 g729_bitsno2[4];
 extern const G729_Word16 g729_tabpow[33];
 extern const G729_Word16 g729_tablog[33];
 extern const G729_Word16 g729_tabsqr[49];

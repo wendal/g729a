@@ -71,17 +71,31 @@ G729_Word32 G729A_Encoder_Init(G729A_Enc_state encState)
     return G729A_NO_ERROR;
 }
 
-G729_Word32 G729A_Encoder_Process(G729A_Enc_state encState, const G729_Word16 * speechIn, G729_UWord8 * outData)
+G729_Word32 G729A_Encoder_Set_Vad(G729A_Enc_state encState, G729_Word32 on)
 {
     g729a_encoder_state * state;
-    G729_Word16 prm[PRM_SIZE];  /* Analysis parameters. */
+    if ( NULL == encState ) return G729A_ERROR_NULL_STATE;
+    
+    state = (g729a_encoder_state *)encState;
+    
+    if ( G729A_ENC_STATE_MAGIC != state->magic ) return G729A_ERROR_NOT_INITIALIZED;
+    
+    state->vad_enable = ( on != 0 ) ? 1 : 0;
+    
+    return G729A_NO_ERROR;
+}
+
+G729_Word32 G729A_Encoder_Process(G729A_Enc_state encState, const G729_Word16 * speechIn, G729_UWord8 * outData, G729_UWord32 * outLen)
+{
+    g729a_encoder_state * state;
+    G729_Word16 prm[PRM_SIZE+1];  /* Frame type + analysis parameters. */
     
     if ( NULL == encState ) return G729A_ERROR_NULL_STATE;
     
     state = (g729a_encoder_state *)encState;
     
     if ( G729A_ENC_STATE_MAGIC != state->magic ) return G729A_ERROR_NOT_INITIALIZED;
-    if ( (NULL == speechIn) || (NULL == outData) )
+    if ( (NULL == speechIn) || (NULL == outData) || (NULL == outLen) )
     {
         state->error = G729A_ERROR_NULL_BUFFER;
         return state->error;
@@ -89,9 +103,13 @@ G729_Word32 G729A_Encoder_Process(G729A_Enc_state encState, const G729_Word16 * 
     
     state->error = G729A_NO_ERROR;
     
+    /* frame counter for the VAD, same wraparound as the ITU reference coder */
+    if ( state->frame == 32767 ) state->frame = 256;
+    else state->frame++;
+    
     g729_Pre_Process(&(state->pre_process_state), speechIn, state->new_speech, L_FRAME);
-    g729_Coder_ld8a(state, prm);
-    g729_prm2bits_ld8k_compressed(prm, outData);
+    g729_Coder_ld8a(state, prm, state->frame, state->vad_enable);
+    *outLen = (G729_UWord32)g729_prm2bits_ld8k_compressed(prm, outData);
     
     return G729A_NO_ERROR;
 }
@@ -140,11 +158,12 @@ G729_Word32 G729A_Decoder_Init(G729A_Dec_state decState)
     return G729A_NO_ERROR;
 }
 
-G729_Word32 G729A_Decoder_Process(G729A_Dec_state decState, const G729_UWord8 * inData, G729_Word16 * speechOut)
+G729_Word32 G729A_Decoder_Process(G729A_Dec_state decState, const G729_UWord8 * inData, G729_UWord32 inLen, G729_Word16 * speechOut)
 {
-    G729_Word16  parm[PRM_SIZE+1];           /* Synthesis parameters        */
+    G729_Word16  parm[PRM_SIZE+2];           /* Synthesis parameters        */
     G729_Word16  Az_dec[MP1*2];              /* Decoded Az for post-filter  */
     G729_Word16  T2[2];                      /* Pitch lag for 2 subframes   */
+    G729_Word16  Vad;                        /* Frame type                  */
 
     g729a_decoder_state *state;
     if ( NULL == decState ) return G729A_ERROR_NULL_STATE;
@@ -152,7 +171,17 @@ G729_Word32 G729A_Decoder_Process(G729A_Dec_state decState, const G729_UWord8 * 
     state = (g729a_decoder_state *)decState;
 
     if ( G729A_DEC_STATE_MAGIC != state->magic ) return G729A_ERROR_NOT_INITIALIZED;
-    if ( (NULL == inData) || (NULL == speechOut) )
+    if ( NULL == speechOut )
+    {
+        state->error = G729A_ERROR_NULL_BUFFER;
+        return state->error;
+    }
+    if ( (inLen != G729A_FRAME_LEN_VOICE) && (inLen != G729A_FRAME_LEN_SID) && (inLen != G729A_FRAME_LEN_NODATA) )
+    {
+        state->error = G729A_ERROR_BAD_LENGTH;
+        return state->error;
+    }
+    if ( (NULL == inData) && (inLen != G729A_FRAME_LEN_NODATA) )
     {
         state->error = G729A_ERROR_NULL_BUFFER;
         return state->error;
@@ -160,15 +189,18 @@ G729_Word32 G729A_Decoder_Process(G729A_Dec_state decState, const G729_UWord8 * 
     
     state->error = G729A_NO_ERROR;
     
-    g729_bits2prm_ld8k_compressed(inData, &parm[1]);
+    g729_bits2prm_ld8k_compressed(inData, parm, (G729_Word16)inLen);
     
     parm[0] = 0;           /* No frame erasure */
     
-    /* check pitch parity and put 1 in parm[4] if parity error */
-    parm[4] = g729_Check_Parity_Pitch(parm[3], parm[4]);
+    if ( parm[1] == 1 )
+    {
+        /* check pitch parity and put 1 in parm[5] if parity error */
+        parm[5] = g729_Check_Parity_Pitch(parm[4], parm[5]);
+    }
     
-    g729_Decod_ld8a(state, parm, state->synth, Az_dec, T2, state->bad_lsf);
-    g729_Post_Filter(&(state->post_filter_state), state->synth, Az_dec, T2);
+    g729_Decod_ld8a(state, parm, state->synth, Az_dec, T2, state->bad_lsf, &Vad);
+    g729_Post_Filter(&(state->post_filter_state), state->synth, Az_dec, T2, Vad);
     g729_Post_Process(&(state->post_process_state), state->synth, speechOut, L_FRAME);
     
     return G729A_NO_ERROR;
@@ -192,7 +224,7 @@ G729_Word32 G729A_Decoder_Get_Error(G729A_Dec_state decState)
 
 const char * G729A_Get_Version(void)
 {
-    static const char * version = "1.1";
+    static const char * version = "2.0";
     return version;
 }
 
@@ -200,17 +232,17 @@ const char * G729A_Get_Version(void)
  * Testing functions                           *
  *---------------------------------------------*/
 
-G729_Word32 G729A_Encoder_Process_Testing(G729A_Enc_state encState, const G729_Word16 * speechIn, G729_Word16 * outData)
+G729_Word32 G729A_Encoder_Process_Testing(G729A_Enc_state encState, const G729_Word16 * speechIn, G729_Word16 * outData, G729_UWord32 * outLen)
 {
     g729a_encoder_state * state;
-    G729_Word16 prm[PRM_SIZE];  /* Analysis parameters. */
+    G729_Word16 prm[PRM_SIZE+1];  /* Frame type + analysis parameters. */
     
     if ( NULL == encState ) return G729A_ERROR_NULL_STATE;
     
     state = (g729a_encoder_state *)encState;
     
     if ( G729A_ENC_STATE_MAGIC != state->magic ) return G729A_ERROR_NOT_INITIALIZED;
-    if ( (NULL == speechIn) || (NULL == outData) )
+    if ( (NULL == speechIn) || (NULL == outData) || (NULL == outLen) )
     {
         state->error = G729A_ERROR_NULL_BUFFER;
         return state->error;
@@ -218,19 +250,26 @@ G729_Word32 G729A_Encoder_Process_Testing(G729A_Enc_state encState, const G729_W
     
     state->error = G729A_NO_ERROR;
     
+    /* frame counter for the VAD, same wraparound as the ITU reference coder */
+    if ( state->frame == 32767 ) state->frame = 256;
+    else state->frame++;
+    
     g729_Pre_Process(&(state->pre_process_state), speechIn, state->new_speech, L_FRAME);
-    g729_Coder_ld8a(state, prm);
+    g729_Coder_ld8a(state, prm, state->frame, state->vad_enable);
     g729_prm2bits_ld8k(prm, outData);
+    
+    *outLen = (G729_UWord32)outData[1] + 2;   /* SYNC word + SIZE word + SIZE words */
     
     return G729A_NO_ERROR;
 }
 
-G729_Word32 G729A_Decoder_Process_Testing(G729A_Dec_state decState, const G729_Word16 * inData, G729_Word16 * speechOut)
+G729_Word32 G729A_Decoder_Process_Testing(G729A_Dec_state decState, const G729_Word16 * inData, G729_UWord32 inLen, G729_Word16 * speechOut)
 {
     G729_Word16 i;
-    G729_Word16 parm[PRM_SIZE+1];           /* Synthesis parameters        */
+    G729_Word16 parm[PRM_SIZE+2];           /* Synthesis parameters        */
     G729_Word16 Az_dec[MP1*2];              /* Decoded Az for post-filter  */
     G729_Word16 T2[2];                      /* Pitch lag for 2 subframes   */
+    G729_Word16 Vad;                        /* Frame type                  */
     
     g729a_decoder_state *state;
     if ( NULL == decState ) return G729A_ERROR_NULL_STATE;
@@ -243,22 +282,38 @@ G729_Word32 G729A_Decoder_Process_Testing(G729A_Dec_state decState, const G729_W
         state->error = G729A_ERROR_NULL_BUFFER;
         return state->error;
     }
+    if ( inLen < 2 )
+    {
+        state->error = G729A_ERROR_BAD_LENGTH;
+        return state->error;
+    }
     
     state->error = G729A_NO_ERROR;
     
-    g729_bits2prm_ld8k(&inData[2], &parm[1]);
+    g729_bits2prm_ld8k(&inData[1], parm);
     
+    /* Frame erasure detection, from the ITU reference read_frame()
+       (bits.c, Annex B): for speech and SID frames, the hardware detects
+       frame erasures by checking if any bit is set to zero; for
+       untransmitted frames, by testing the sync word. */
     parm[0] = 0;           /* No frame erasure */
-    for ( i = 2; i < SERIAL_SIZE; ++i )
+    if ( inData[1] != 0 )
     {
-        if (inData[i] == 0 ) parm[0] = 1;  /* frame erased */
+        for ( i = 0; i < inData[1]; ++i )
+        {
+            if ( inData[i+2] == 0 ) parm[0] = 1;    /* frame erased */
+        }
+    }
+    else if ( inData[0] != SYNC_WORD ) parm[0] = 1;
+    
+    if ( parm[1] == 1 )
+    {
+        /* check pitch parity and put 1 in parm[5] if parity error */
+        parm[5] = g729_Check_Parity_Pitch(parm[4], parm[5]);
     }
     
-    /* check pitch parity and put 1 in parm[4] if parity error */
-    parm[4] = g729_Check_Parity_Pitch(parm[3], parm[4]);
-    
-    g729_Decod_ld8a(state, parm, state->synth, Az_dec, T2, state->bad_lsf);
-    g729_Post_Filter(&(state->post_filter_state), state->synth, Az_dec, T2);
+    g729_Decod_ld8a(state, parm, state->synth, Az_dec, T2, state->bad_lsf, &Vad);
+    g729_Post_Filter(&(state->post_filter_state), state->synth, Az_dec, T2, Vad);
     g729_Post_Process(&(state->post_process_state), state->synth, speechOut, L_FRAME);
     
     return G729A_NO_ERROR;

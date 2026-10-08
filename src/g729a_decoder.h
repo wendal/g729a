@@ -136,6 +136,15 @@ typedef struct _g729a_decoder_state
     G729_Word16 *synth;
     
     /*--------------------------------------------------------------------------*
+     * dec_ld8a.c  (Annex B)
+     *--------------------------------------------------------------------------*/
+    
+    G729_Word16 seed;            /* CNG random generator seed             */
+    G729_Word16 past_ftyp;       /* past frame type                       */
+    G729_Word16 sid_sav;         /* energy saved to recover SID gain      */
+    G729_Word16 sh_sid_sav;      /* corresponding scaling factor          */
+    
+    /*--------------------------------------------------------------------------*
      * dec_gain.c
      *--------------------------------------------------------------------------*/
     
@@ -170,11 +179,13 @@ void g729_Init_Decod_ld8a(g729a_decoder_state * state);
 void g729_Decod_ld8a(
     g729a_decoder_state * state,
     G729_Word16  parm[],      /* (i)   : vector of synthesis parameters
-                                         parm[0] = bad frame indicator (bfi)  */
+                                         parm[0] = bad frame indicator (bfi)
+                                         parm[1] = frame type (Annex B)        */
     G729_Word16  synth[],     /* (o)   : synthesis speech                     */
     G729_Word16  A_t[],       /* (o)   : decoded LP filter in 2 subframes     */
     G729_Word16  *T2,         /* (o)   : decoded pitch lag in 2 subframes     */
-    G729_Word16 bad_lsf       /* (i)   : bad LSF indicator   */
+    G729_Word16 bad_lsf,      /* (i)   : bad LSF indicator                    */
+    G729_Word16  *Vad         /* (o)   : frame type (Annex B)                 */
 );
     
 /*-------------------------------*
@@ -187,7 +198,8 @@ void g729_Post_Filter(
     g729a_post_filter_state * state,
     G729_Word16 *syn,        /* in/out: synthesis speech (postfiltered is output)    */
     G729_Word16 *Az_4,       /* input : interpolated LPC parameters in all subframes */
-    G729_Word16 *T           /* input : decoded pitch lags in all subframes          */
+    G729_Word16 *T,          /* input : decoded pitch lags in all subframes          */
+    G729_Word16 Vad          /* input : frame type (1 = voice, Annex B)              */
 );
     
 /*-------------------------------*

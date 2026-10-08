@@ -53,22 +53,14 @@
 #include "g729a_encoder.h"
 
 /* Local functions */
-static void Calc_pastfilt(g729a_dtx_state * state, G729_Word16 *Coeff);
+static void Calc_pastfilt(g729a_dtx_state * state, G729_Word16 *Coeff,
+                          G729_Word16 old_A[], G729_Word16 old_rc[]);
 static void Calc_RCoeff(G729_Word16 *Coeff, G729_Word16 *RCoeff, G729_Word16 *sh_RCoeff);
 static G729_Word16 Cmp_filt(G729_Word16 *RCoeff, G729_Word16 sh_RCoeff, G729_Word16 *acf,
                                         G729_Word16 alpha, G729_Word16 Fracthresh);
 static void Calc_sum_acf(G729_Word16 *acf, G729_Word16 *sh_acf,
                     G729_Word16 *sum, G729_Word16 *sh_sum, G729_Word16 nb);
 static void Update_sumAcf(g729a_dtx_state * state);
-
-/* Levinson-Durbin with residual energy output (see note in the body below) */
-static void Levinson(g729a_dtx_state * state,
-  G729_Word16 Rh[],      /* (i)     : Rh[M+1] Vector of autocorrelations (msb) */
-  G729_Word16 Rl[],      /* (i)     : Rl[M+1] Vector of autocorrelations (lsb) */
-  G729_Word16 A[],       /* (o) Q12 : A[M]    LPC coefficients  (m = 10)       */
-  G729_Word16 rc[],      /* (o) Q15 : rc[M]   Reflection coefficients.         */
-  G729_Word16 *Err       /* (o)     : Residual energy                          */
-);
 
 /*-----------------------------------------------------------*
  * procedure g729_Init_Cod_cng:                              *
@@ -101,12 +93,6 @@ void g729_Init_Cod_cng(g729a_dtx_state * state)
   state->prev_energy = 0;
   state->count_fr0 = 0;
 
-  /* Last A(z) for case of unstable filter (local Levinson fallback) */
-  state->old_A[0] = 4096;
-  for(i=1; i<MP1; i++) state->old_A[i] = 0;
-  state->old_rc[0] = 0;
-  state->old_rc[1] = 0;
-
   /* Initialize the noise LSF predictor coefficients */
   g729_Init_lsfq_noise(state->noise_fg);
 
@@ -131,8 +117,10 @@ void g729_Cod_cng(
   G729_Word16 freq_prev[MA_NP][M],
                         /* (i/o) : previous LPS for quantization        */
   G729_Word16 *seed,         /* (i/o) : random generator seed                */
-  g729a_taming_state * taming_state
+  g729a_taming_state * taming_state,
                         /* (i/o) : taming state for excitation error update */
+  G729_Word16 old_A[],  /* (i/o) : g729_Levinson fallback memory            */
+  G729_Word16 old_rc[]  /* (i/o) : g729_Levinson fallback memory            */
 )
 {
 
@@ -161,7 +149,7 @@ void g729_Cod_cng(
   }
   else {
     g729_Set_zero(zero, MP1);
-    Levinson(state, curAcf, zero, curCoeff, bid, &state->ener[0]);
+    g729_Levinson(curAcf, zero, curCoeff, bid, &state->ener[0], old_A, old_rc);
   }
 
   /* if first frame of silence => SID frame */
@@ -212,7 +200,7 @@ void g729_Cod_cng(
     state->flag_chang = 0;
 
     /* Compute past average filter */
-    Calc_pastfilt(state, state->pastCoeff);
+    Calc_pastfilt(state, state->pastCoeff, old_A, old_rc);
     Calc_RCoeff(state->pastCoeff, state->RCoeff, &state->sh_RCoeff);
 
     /* Compute stationarity of current filter   */
@@ -428,7 +416,8 @@ static G729_Word16 Cmp_filt(G729_Word16 *RCoeff, G729_Word16 sh_RCoeff, G729_Wor
 
 /* Compute past average filter */
 /*******************************/
-static void Calc_pastfilt(g729a_dtx_state * state, G729_Word16 *Coeff)
+static void Calc_pastfilt(g729a_dtx_state * state, G729_Word16 *Coeff,
+                          G729_Word16 old_A[], G729_Word16 old_rc[])
 {
   G729_Word16 i;
   G729_Word16 s_sumAcf[MP1];
@@ -444,7 +433,7 @@ static void Calc_pastfilt(g729a_dtx_state * state, G729_Word16 *Coeff)
   }
 
   g729_Set_zero(zero, MP1);
-  Levinson(state, s_sumAcf, zero, Coeff, bid, &temp);
+  g729_Levinson(s_sumAcf, zero, Coeff, bid, &temp, old_A, old_rc);
   return;
 }
 
@@ -507,155 +496,5 @@ static void Calc_sum_acf(G729_Word16 *acf, G729_Word16 *sh_acf,
   }
   temp = g729_sub(temp, 16);
   *sh_sum = g729_add(sh0, temp);
-  return;
-}
-
-/*---------------------------------------------------------------------------*
- *                                                                           *
- *  Levinson-Durbin with residual energy output.                             *
- *                                                                           *
- *  The ITU Annex B reference shares one Levinson() (with Err output and an  *
- *  old_A/old_rc instability fallback) between the speech and the DTX paths. *
- *  This library's g729_Levinson() (lpc.c) has neither, so the DTX path      *
- *  keeps its own local copy here; the fallback memory lives in the DTX      *
- *  state instead of file-scope statics.                                     *
- *                                                                           *
- *---------------------------------------------------------------------------*/
-
-static void Levinson(g729a_dtx_state * state,
-  G729_Word16 Rh[],      /* (i)     : Rh[M+1] Vector of autocorrelations (msb) */
-  G729_Word16 Rl[],      /* (i)     : Rl[M+1] Vector of autocorrelations (lsb) */
-  G729_Word16 A[],       /* (o) Q12 : A[M]    LPC coefficients  (m = 10)       */
-  G729_Word16 rc[],      /* (o) Q15 : rc[M]   Reflection coefficients.         */
-  G729_Word16 *Err       /* (o)     : Residual energy                          */
-)
-{
- G729_Word16 i, j;
- G729_Word16 hi, lo;
- G729_Word16 Kh, Kl;                /* reflection coefficient; hi and lo           */
- G729_Word16 alp_h, alp_l, alp_exp; /* Prediction gain; hi lo and exponent         */
- G729_Word16 Ah[M+1], Al[M+1];      /* LPC coef. in double prec.                   */
- G729_Word16 Anh[M+1], Anl[M+1];    /* LPC coef.for next iteration in double prec. */
- G729_Word32 t0, t1, t2;            /* temporary variable                          */
-
-
-/* K = A[1] = -R[1] / R[0] */
-
-  t1  = g729_L_Comp(Rh[1], Rl[1]);           /* R[1] in Q31      */
-  t2  = g729_L_abs(t1);                      /* abs R[1]         */
-  t0  = g729_Div_32(t2, Rh[0], Rl[0]);       /* R[1]/R[0] in Q31 */
-  if(t1 > 0) t0= g729_L_negate(t0);          /* -R[1]/R[0]       */
-  g729_L_Extract(t0, &Kh, &Kl);              /* K in DPF         */
-  rc[0] = Kh;
-  t0 = g729_L_shr(t0,4);                     /* A[1] in Q27      */
-  g729_L_Extract(t0, &Ah[1], &Al[1]);        /* A[1] in DPF      */
-
-/*  Alpha = R[0] * (1-K**2) */
-
-  t0 = g729_Mpy_32(Kh ,Kl, Kh, Kl);          /* K*K      in Q31 */
-  t0 = g729_L_abs(t0);                       /* Some case <0 !! */
-  t0 = g729_L_sub( (G729_Word32)0x7fffffffL, t0 ); /* 1 - K*K  in Q31 */
-  g729_L_Extract(t0, &hi, &lo);              /* DPF format      */
-  t0 = g729_Mpy_32(Rh[0] ,Rl[0], hi, lo);    /* Alpha in Q31    */
-
-/* Normalize Alpha */
-
-  alp_exp = g729_norm_l(t0);
-  t0 = g729_L_shl(t0, alp_exp);
-  g729_L_Extract(t0, &alp_h, &alp_l);         /* DPF format    */
-
-/*--------------------------------------*
- * ITERATIONS  I=2 to M                 *
- *--------------------------------------*/
-
-  for(i= 2; i<=M; i++)
-  {
-
-    /* t0 = SUM ( R[j]*A[i-j] ,j=1,i-1 ) +  R[i] */
-
-    t0 = 0;
-    for(j=1; j<i; j++)
-      t0 = g729_L_add(t0, g729_Mpy_32(Rh[j], Rl[j], Ah[i-j], Al[i-j]));
-
-    t0 = g729_L_shl(t0,4);                  /* result in Q27 -> convert to Q31 */
-                                            /* No overflow possible            */
-    t1 = g729_L_Comp(Rh[i],Rl[i]);
-    t0 = g729_L_add(t0, t1);                /* add R[i] in Q31                 */
-
-    /* K = -t0 / Alpha */
-
-    t1 = g729_L_abs(t0);
-    t2 = g729_Div_32(t1, alp_h, alp_l);     /* abs(t0)/Alpha                   */
-    if(t0 > 0) t2= g729_L_negate(t2);       /* K =-t0/Alpha                    */
-    t2 = g729_L_shl(t2, alp_exp);           /* denormalize; compare to Alpha   */
-    g729_L_Extract(t2, &Kh, &Kl);           /* K in DPF                        */
-    rc[i-1] = Kh;
-
-    /* Test for unstable filter. If unstable keep old A(z) */
-
-    if (g729_sub(g729_abs_s(Kh), 32750) > 0)
-    {
-      for(j=0; j<=M; j++)
-      {
-        A[j] = state->old_A[j];
-      }
-      rc[0] = state->old_rc[0];   /* only two rc coefficients are needed */
-      rc[1] = state->old_rc[1];
-      return;
-    }
-
-    /*------------------------------------------*
-     *  Compute new LPC coeff. -> An[i]         *
-     *  An[j]= A[j] + K*A[i-j]     , j=1 to i-1 *
-     *  An[i]= K                                *
-     *------------------------------------------*/
-
-
-    for(j=1; j<i; j++)
-    {
-      t0 = g729_Mpy_32(Kh, Kl, Ah[i-j], Al[i-j]);
-      t0 = g729_L_add(t0, g729_L_Comp(Ah[j], Al[j]));
-      g729_L_Extract(t0, &Anh[j], &Anl[j]);
-    }
-    t2 = g729_L_shr(t2, 4);                  /* t2 = K in Q31 ->convert to Q27  */
-    g729_L_Extract(t2, &Anh[i], &Anl[i]);    /* An[i] in Q27                    */
-
-    /*  Alpha = Alpha * (1-K**2) */
-
-    t0 = g729_Mpy_32(Kh ,Kl, Kh, Kl);          /* K*K      in Q31 */
-    t0 = g729_L_abs(t0);                       /* Some case <0 !! */
-    t0 = g729_L_sub( (G729_Word32)0x7fffffffL, t0 ); /* 1 - K*K  in Q31 */
-    g729_L_Extract(t0, &hi, &lo);              /* DPF format      */
-    t0 = g729_Mpy_32(alp_h , alp_l, hi, lo);   /* Alpha in Q31    */
-
-    /* Normalize Alpha */
-
-    j = g729_norm_l(t0);
-    t0 = g729_L_shl(t0, j);
-    g729_L_Extract(t0, &alp_h, &alp_l);         /* DPF format    */
-    alp_exp = g729_add(alp_exp, j);             /* Add normalization to alp_exp */
-
-    /* A[j] = An[j] */
-
-    for(j=1; j<=i; j++)
-    {
-      Ah[j] =Anh[j];
-      Al[j] =Anl[j];
-    }
-  }
-
-  *Err = g729_shr(alp_h, alp_exp);
-
-  /* Truncate A[i] in Q27 to Q12 with rounding */
-
-  A[0] = 4096;
-  for(i=1; i<=M; i++)
-  {
-    t0   = g729_L_Comp(Ah[i], Al[i]);
-    state->old_A[i] = A[i] = g729_round(g729_L_shl(t0, 1));
-  }
-  state->old_rc[0] = rc[0];
-  state->old_rc[1] = rc[1];
-
   return;
 }

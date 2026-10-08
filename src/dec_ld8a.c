@@ -45,6 +45,10 @@
 #include "basic_op.h"
 #include "ld8a.h"
 
+#include "vad.h"
+#include "dtx.h"
+#include "tab_dtx.h"
+
 #include "g729a_errors.h"
 #include "g729a_decoder.h"
 
@@ -101,6 +105,10 @@ void g729_Init_Decod_ld8a(g729a_decoder_state * state)
     g729_Lsp_decw_reset(&(state->lspdec_state));
     
     /* Annex B (VAD/DTX/CNG) */
+    state->past_ftyp  = 1;
+    state->seed       = INIT_SEED;
+    state->sid_sav    = 0;
+    state->sh_sid_sav = 1;
     g729_Init_Dec_cng(&(state->cng_state));
     
     return;
@@ -116,11 +124,13 @@ void g729_Init_Decod_ld8a(g729a_decoder_state * state)
 void g729_Decod_ld8a(
     g729a_decoder_state * state,
     G729_Word16  parm[],      /* (i)   : vector of synthesis parameters
-                                         parm[0] = bad frame indicator (bfi)  */
+                                         parm[0] = bad frame indicator (bfi)
+                                         parm[1] = frame type (Annex B)        */
     G729_Word16  synth[],     /* (o)   : synthesis speech                     */
     G729_Word16  A_t[],       /* (o)   : decoded LP filter in 2 subframes     */
     G729_Word16  *T2,         /* (o)   : decoded pitch lag in 2 subframes     */
-    G729_Word16 bad_lsf       /* (i)   : bad LSF indicator   */
+    G729_Word16 bad_lsf,      /* (i)   : bad LSF indicator                    */
+    G729_Word16  *Vad         /* (o)   : frame type (Annex B)                 */
 )
 {
     G729_Word16  *Az;                  /* Pointer on A_t   */
@@ -136,9 +146,63 @@ void g729_Decod_ld8a(
     
     G729_Word16 bad_pitch;             /* bad pitch indicator */
     
+    /* for G.729B */
+    G729_Word16 ftyp;
+    
     /* Test bad frame indicator (bfi) */
     
     bfi = *parm++;
+    /* for G.729B */
+    ftyp = *parm;
+    
+    if(bfi == 1) {
+        if(state->past_ftyp == 1) {
+            ftyp = 1;
+            parm[4] = 1;    /* G.729 maintenance */
+        }
+        else ftyp = 0;
+        *parm = ftyp;  /* modification introduced in version V1.3 */
+    }
+    
+    *Vad = ftyp;
+    
+    /* Processing non active frames (SID & not transmitted) */
+    if(ftyp != 1) {
+        
+        g729_Dec_cng(&(state->cng_state), state->past_ftyp, state->sid_sav,
+                     state->sh_sid_sav, parm, state->exc, state->lsp_old,
+                     A_t, &(state->seed), state->lspdec_state.freq_prev);
+        
+        Az = A_t;
+        for (i_subfr = 0; i_subfr < L_FRAME; i_subfr += L_SUBFR) {
+            
+            if (g729_Syn_filt_Overflow(Az, &(state->exc[i_subfr]), &synth[i_subfr], L_SUBFR, state->mem_syn))
+            {
+                /* In case of overflow in the synthesis          */
+                /* -> Scale down vector exc[] and redo synthesis */
+                
+                for(i=0; i<PIT_MAX+L_INTERPOL+L_FRAME; i++)
+                    state->old_exc[i] = g729_shr(state->old_exc[i], 2);
+                
+                g729_Syn_filt(Az, &(state->exc[i_subfr]), &synth[i_subfr], L_SUBFR, state->mem_syn, 1);
+            }
+            else
+            {
+                g729_Copy(&synth[i_subfr+L_SUBFR-M], state->mem_syn, M);
+            }
+            
+            Az += MP1;
+            
+            *T2++ = state->old_T0;
+        }
+        state->sharp = SHARPMIN;
+        
+    }
+    /* Processing active frame */
+    else {
+    
+    state->seed = INIT_SEED;
+    parm++;
     
     /* Decode the LSPs */
     
@@ -291,6 +355,20 @@ void g729_Decod_ld8a(
         
         Az += MP1;    /* interpolated LPC parameters for next subframe */
     }
+    }
+    
+    /*------------*
+     *  For G729b
+     *-----------*/
+    if(bfi == 0) {
+        L_temp = 0L;
+        for(i=0; i<L_FRAME; i++) {
+            L_temp = g729_L_mac(L_temp, state->exc[i], state->exc[i]);
+        } /* may overflow => last level of SID quantizer */
+        state->sh_sid_sav = g729_norm_l(L_temp);
+        state->sid_sav = g729_round(g729_L_shl(L_temp, state->sh_sid_sav));
+        state->sh_sid_sav = g729_sub(16, state->sh_sid_sav);
+    }
     
     /*--------------------------------------------------*
      * Update signal for next frame.                    *
@@ -298,6 +376,9 @@ void g729_Decod_ld8a(
      *--------------------------------------------------*/
     
     g729_Copy(&(state->old_exc[L_FRAME]), &(state->old_exc[0]), PIT_MAX+L_INTERPOL);
+    
+    /* for G729b */
+    state->past_ftyp = ftyp;
     
     return;
 }

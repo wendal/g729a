@@ -120,10 +120,6 @@ typedef struct _g729a_dtx_state
     G729_Word16 prev_energy;
     G729_Word16 count_fr0;
     
-    /* Last A(z) for case of unstable filter (local Levinson fallback) */
-    G729_Word16 old_A[MP1];
-    G729_Word16 old_rc[2];
-    
     /* Noise LSF predictor coefficients; run-time-initialized noise_fg
        table of the ITU reference (tab_dtx.c), kept here per instance. */
     G729_Word16 noise_fg[MODE][MA_NP][M];
@@ -161,6 +157,29 @@ typedef struct _g729a_encoder_state
     G729_Word16 mem_w[M];
     G729_Word16 mem_zero[M];
     G729_Word16 sharp;
+    
+    /*--------------------------------------------------------------------------*
+     * cod_ld8a.c  (Annex B)
+     *--------------------------------------------------------------------------*/
+    
+    G729_Word16 pastVad;         /* VAD decision of the previous frame        */
+    G729_Word16 ppastVad;        /* VAD decision of the frame before that     */
+    G729_Word16 seed;            /* CNG random generator seed                 */
+    
+    /*--------------------------------------------------------------------------*
+     * lpc.c  (Annex B: g729_Levinson instability fallback, shared by the
+     * speech path and the DTX/CNG path as in the ITU reference)
+     *--------------------------------------------------------------------------*/
+    
+    G729_Word16 old_A[MP1];
+    G729_Word16 old_rc[2];
+    
+    /*--------------------------------------------------------------------------*
+     * g729a_interface.c  (Annex B)
+     *--------------------------------------------------------------------------*/
+    
+    G729_Word16 vad_enable;      /* VAD/DTX enable flag (default: 0 = off)    */
+    G729_Word16 frame;           /* frame counter for the VAD                 */
     
     /*--------------------------------------------------------------------------*
      * qua_gain.c                                                               *
@@ -205,7 +224,11 @@ void g729_Init_Coder_ld8a(g729a_encoder_state * state);
 
 void g729_Coder_ld8a(
     g729a_encoder_state * state,
-    G729_Word16 ana[]                    /* output  : Analysis parameters */
+    G729_Word16 ana[],        /* output  : Analysis parameters;
+                                 ana[0] = frame type: 1 voice, 2 SID,
+                                 0 untransmitted (Annex B)              */
+    G729_Word16 frame,        /* input   : frame counter (Annex B VAD)  */
+    G729_Word16 vad_enable    /* input   : VAD enable flag (Annex B)    */
 );
     
 /*-------------------------------*
@@ -311,8 +334,10 @@ void g729_Cod_cng(
     G729_Word16 freq_prev[MA_NP][M],
                                /* (i/o) : previous LPS for quantization        */
     G729_Word16 *seed,         /* (i/o) : random generator seed                */
-    g729a_taming_state * taming_state
+    g729a_taming_state * taming_state,
                                /* (i/o) : taming state for excitation update   */
+    G729_Word16 old_A[],       /* (i/o) : g729_Levinson fallback memory        */
+    G729_Word16 old_rc[]       /* (i/o) : g729_Levinson fallback memory        */
 );
 
 void g729_Update_cng(
