@@ -39,6 +39,8 @@
 
 #include "g729a_interface.h"
 
+#include <stddef.h>
+
 #include "g729a_encoder.h"
 #include "g729a_decoder.h"
 
