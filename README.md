@@ -1,17 +1,22 @@
 # g729a
 
+[![CI](https://github.com/wendal/g729a/actions/workflows/ci.yml/badge.svg)](https://github.com/wendal/g729a/actions/workflows/ci.yml)
+
 ITU-T G.729A (Annex A) 8 kbit/s speech codec, fixed point ANSI-C reference
 implementation restructured to support multi-instance use in multi-threaded
 and RTOS based environments.
 
 - Bit-exact with the ITU-T G.729A test vectors in the 164-byte ITU test format
-  (`bash tests/run_vectors.sh build`: 17/17).
+  (`bash tests/run_vectors.sh build`: 17/17), verified by CI on
+  Ubuntu (gcc), Windows (MSVC) and macOS (clang).
 - The 10-byte compressed format has no ITU reference files: there the codec is
   verified by round-trip, encoding the ITU speech files and decoding the result
   reproduces the reference `*.PST` synthesis byte for byte.
 - All codec state lives in caller-provided state structs; there is no global
   or static mutable state left on the codec paths.
-- Portable C99, no dependencies beyond the C standard library.
+- Portable C99, no dependencies beyond the C standard library. The library
+  itself performs no heap allocation and no stdio calls; all lookup tables
+  are `const` and land in read-only memory.
 
 ## Building
 
@@ -96,6 +101,47 @@ and a negative code on failure; `G729A_*_Get_Size()` returns the state size and
 `G729A_Encoder_Get_Error()` / `G729A_Decoder_Get_Error()` return the last error
 code stored in a state. The error checks only reject misuse; they do not change
 the processing path itself.
+
+## Embedding the library
+
+For integration into another build system (RTOS SDK, LuatOS component, ...),
+no CMake is required:
+
+- Compile every `src/*.c` **except** `coder.c` and `decoder.c` (those carry
+  the command line `main()` functions).
+- Add `src/interface/` to the public include path; the sources additionally
+  expect `src/` itself on the include path.
+- No preprocessor configuration is needed for normal operation.
+
+Resource footprint (32-bit host, approximate):
+
+| Item | Encoder | Decoder |
+|---|---|---|
+| State struct (`G729A_*_Get_Size()`) | ~2.9 KB | ~1.6 KB |
+| Peak stack usage | ~1.5 KB | ~1 KB |
+
+About 6 KB of lookup tables are `const` and stay in ROM/flash. With
+`-ffunction-sections` and `--gc-sections`, linking only the decoder API
+discards the encoder code paths and vice versa.
+
+## Migrating from earlier revisions
+
+Compared with the pre-modernization code (and the original ITU release):
+
+- State sizes changed (see the table above): always allocate with
+  `G729A_*_Get_Size()`, never hardcode a size, and always call the matching
+  `Init` before `Process` — uninitialized states are now rejected with
+  `G729A_ERROR_NOT_INITIALIZED` instead of being silently tolerated.
+- `Process`/`Process_Testing` can return `-1`/`-2`/`-3` (see the error code
+  list above); callers that only checked `== -1` need to handle the new codes.
+- The `speechIn`/`inData` arguments of the `Process` functions are now
+  `const`, and the `Get_Size`/`Get_Version` prototypes use `(void)`.
+- `G729A_Decoder_Init()` / `G729A_Decoder_Get_Error()` no longer take an
+  encoder state by mistake (the parameter type was wrong in both directions).
+- The `USE_GLOBAL_OVERFLOW_FLAG` build switch is gone; defining it fails the
+  build with `#error`.
+- The legacy `src/makefile` is superseded by CMake and kept only for
+  reference.
 
 ## Multi-instance and reentrancy notes
 
