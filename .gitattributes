@@ -6,3 +6,5 @@
 # autocrlf default of the development environment, re-adding the file would
 # otherwise rewrite every line and destroy git blame for it.
 src/basic_op.c -text
+# Test vectors are raw binary; never let autocrlf touch them.
+test_vectors/** binary
