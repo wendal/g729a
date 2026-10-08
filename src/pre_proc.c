@@ -92,7 +92,7 @@ void g729_Init_Pre_Process(g729a_pre_process_state * state)
 
 void g729_Pre_Process(
     g729a_pre_process_state * state,
-    G729_Word16 singal_in[],     /* input signal */
+    const G729_Word16 singal_in[],     /* input signal (read only) */
     G729_Word16 signal_out[],    /* output signal */
     G729_Word16 lg)              /* length of signal    */
 {

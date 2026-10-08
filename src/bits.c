@@ -48,7 +48,7 @@
 
 /* prototypes for local functions */
 static void  int2bin(G729_Word16 value, G729_Word16 no_of_bits, G729_Word16 *bitstream);
-static G729_Word16   bin2int(G729_Word16 no_of_bits, G729_Word16 *bitstream);
+static G729_Word16   bin2int(G729_Word16 no_of_bits, const G729_Word16 *bitstream);
 
 /*----------------------------------------------------------------------------
  * g729_prm2bits_ld8k -converts encoder parameter vector into vector of serial bits
@@ -123,7 +123,7 @@ static void int2bin(
  *----------------------------------------------------------------------------
  */
 void g729_bits2prm_ld8k(
-        G729_Word16 bits[],            /* input : serial bits (80)                       */
+        const G729_Word16 bits[],      /* input : serial bits (80)                       */
         G729_Word16   prm[]            /* output: decoded parameters (11 parameters)     */
         )
 {
@@ -142,7 +142,7 @@ void g729_bits2prm_ld8k(
  */
 static G729_Word16 bin2int(       /* output: decimal value of bit pattern */
         G729_Word16 no_of_bits,          /* input : number of bits to read       */
-        G729_Word16 *bitstream           /* input : array containing bits        */
+        const G729_Word16 *bitstream     /* input : array containing bits        */
         )
 {
     G729_Word16   value, i;
@@ -176,7 +176,7 @@ void g729_prm2bits_ld8k_compressed(
 }
 
 void g729_bits2prm_ld8k_compressed(
-    G729_UWord8  bits[],            /* input : serial bits (80)                       */
+    const G729_UWord8  bits[],      /* input : serial bits (80)                       */
     G729_Word16  prm[]              /* output: decoded parameters (11 parameters)     */
 )
 {

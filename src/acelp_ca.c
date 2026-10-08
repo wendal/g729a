@@ -46,6 +46,7 @@
 #include "g729a_typedef.h"
 #include "basic_op.h"
 #include "ld8a.h"
+#include "g729a_encoder.h"
 
 /* Constants defined in ld8a.h */
 /*  L_SUBFR   -> Lenght of subframe.                                        */
@@ -75,6 +76,7 @@ static G729_Word16 D4i40_17_fast(/*(o) : Index of pulses positions.             
  *-----------------------------------------------------------------*/
 
 G729_Word16  g729_ACELP_Code_A(    /* (o)     :index of pulses positions    */
+    g729a_encoder_state * state,   /* (i/o)   :Encoder state (holds scratch)*/
     G729_Word16 x[],            /* (i)     :Target vector                */
     G729_Word16 h[],            /* (i) Q12 :Inpulse response of filters  */
     G729_Word16 T0,             /* (i)     :Pitch lag                    */
@@ -86,7 +88,7 @@ G729_Word16  g729_ACELP_Code_A(    /* (o)     :index of pulses positions    */
 {
     G729_Word16 i, index, sharp;
     G729_Word16 Dn[L_SUBFR];
-    G729_Word16 rr[DIM_RR];
+    G729_Word16 *rr = state->acelp_rr;
     
     /*-----------------------------------------------------------------*
      * Include fixed-gain pitch contribution into impulse resp. h[]    *

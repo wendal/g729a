@@ -27,19 +27,28 @@
 #ifndef __G729_ERRORS_H__
 #define __G729_ERRORS_H__
 
-#define G729A_NO_ERROR    0
+/*--------------------------------------------------------------------------*
+ * Error codes                                                              *
+ *                                                                          *
+ * The public API functions return G729A_NO_ERROR (0) on success and a      *
+ * negative code on failure.  The last error of an initialized state is     *
+ * kept in the state and can be read back with G729A_Encoder_Get_Error()    *
+ * and G729A_Decoder_Get_Error().                                           *
+ *--------------------------------------------------------------------------*/
+
+#define G729A_NO_ERROR              0
 
 /*---------------------------------------------*
- * Encoder errors                              *
+ * Generic errors (encoder and decoder)        *
  *---------------------------------------------*/
 
-/* TODO */
+#define G729A_ERROR_NULL_STATE      (-1)  /* state pointer is NULL                       */
+#define G729A_ERROR_NULL_BUFFER     (-2)  /* input or output buffer pointer is NULL      */
+#define G729A_ERROR_NOT_INITIALIZED (-3)  /* state was not set up by G729A_*_Init()      */
 
-/*---------------------------------------------*
- * Decoder errors                              *
- *---------------------------------------------*/
-
-/* TODO */
+/* Value the Init functions store in the magic field of a state struct.
+   Any other value means the state was never initialized. */
+#define G729A_STATE_MAGIC           0x47373239u  /* 'G','7','2','9' */
 
 #endif  /* __G729_ERRORS_H__ */
 /* end of file */

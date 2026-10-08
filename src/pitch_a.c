@@ -303,11 +303,11 @@ G729_Word16 g729_Pitch_ol_fast(  /* output: open loop pitch lag                 
 
 
 /*--------------------------------------------------------------------------*
- *  Function  Dot_Product()                                                 *
- *  ~~~~~~~~~~~~~~~~~~~~~~                                                  *
+ *  Function  g729_Dot_Product()                                            *
+ *  ~~~~~~~~~~~~~~~~~~                                                      *
  *--------------------------------------------------------------------------*/
 
-G729_Word32 Dot_Product(      /* (o)   :Result of scalar product. */
+G729_Word32 g729_Dot_Product(      /* (o)   :Result of scalar product. */
                         G729_Word16   x[],     /* (i)   :First vector.             */
                         G729_Word16   y[],     /* (i)   :Second vector.            */
                         G729_Word16   lg       /* (i)   :Number of point.          */
@@ -360,7 +360,7 @@ G729_Word16 g729_Pitch_fr3_fast(    /* (o)     : pitch period.                  
     
     for(t=t0_min; t<=t0_max; t++)
     {
-        corr = Dot_Product(Dn, &exc[-t], L_subfr);
+        corr = g729_Dot_Product(Dn, &exc[-t], L_subfr);
         L_temp = g729_L_sub(corr, max);
         if(L_temp > 0) {max = corr; t0 = t;  }
     }
@@ -372,7 +372,7 @@ G729_Word16 g729_Pitch_fr3_fast(    /* (o)     : pitch period.                  
     /* Fraction 0 */
     
     g729_Pred_lt_3(exc, t0, 0, L_subfr);
-    max = Dot_Product(Dn, exc, L_subfr);
+    max = g729_Dot_Product(Dn, exc, L_subfr);
     *pit_frac = 0;
     
     /* If first subframe and lag > 84 do not search fractional pitch */
@@ -385,7 +385,7 @@ G729_Word16 g729_Pitch_fr3_fast(    /* (o)     : pitch period.                  
     /* Fraction -1/3 */
     
     g729_Pred_lt_3(exc, t0, -1, L_subfr);
-    corr = Dot_Product(Dn, exc, L_subfr);
+    corr = g729_Dot_Product(Dn, exc, L_subfr);
     L_temp = g729_L_sub(corr, max);
     if(L_temp > 0) {
         max = corr;
@@ -396,7 +396,7 @@ G729_Word16 g729_Pitch_fr3_fast(    /* (o)     : pitch period.                  
     /* Fraction +1/3 */
     
     g729_Pred_lt_3(exc, t0, 1, L_subfr);
-    corr = Dot_Product(Dn, exc, L_subfr);
+    corr = g729_Dot_Product(Dn, exc, L_subfr);
     L_temp = g729_L_sub(corr, max);
     if(L_temp > 0) {
         max = corr;

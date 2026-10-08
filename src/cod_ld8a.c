@@ -382,7 +382,7 @@ void g729_Coder_ld8a(
          * - Innovative codebook search.                       *
          *-----------------------------------------------------*/
         
-        index = g729_ACELP_Code_A(xn2, h1, T0, state->sharp, code, y2, &i);
+        index = g729_ACELP_Code_A(state, xn2, h1, T0, state->sharp, code, y2, &i);
         
         *ana++ = index;        /* Positions index */
         *ana++ = i;            /* Signs index     */

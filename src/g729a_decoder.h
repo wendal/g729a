@@ -89,7 +89,8 @@ typedef struct _g729a_post_process_state
 
 typedef struct _g729a_decoder_state
 {
-    G729_Word32 error;  /* TODO */
+    G729_Word32 error;  /* Last error code, see g729a_errors.h                 */
+    G729_UWord32 magic; /* G729A_STATE_MAGIC once G729A_Decoder_Init() has run */
     
     /*--------------------------------------------------------------------------*
      * dec_ld8a.c
