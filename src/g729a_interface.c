@@ -60,11 +60,11 @@ G729_Word32 G729A_Encoder_Init(G729A_Enc_state encState)
     
     state = (g729a_encoder_state *)encState;
     
-    state->magic = G729A_STATE_MAGIC;
-    state->error = G729A_NO_ERROR;
-    
     g729_Init_Pre_Process(&(state->pre_process_state));
     g729_Init_Coder_ld8a(state);
+    
+    state->magic = G729A_ENC_STATE_MAGIC;
+    state->error = G729A_NO_ERROR;
     
     return G729A_NO_ERROR;
 }
@@ -78,11 +78,7 @@ G729_Word32 G729A_Encoder_Process(G729A_Enc_state encState, const G729_Word16 * 
     
     state = (g729a_encoder_state *)encState;
     
-    if ( G729A_STATE_MAGIC != state->magic )
-    {
-        state->error = G729A_ERROR_NOT_INITIALIZED;
-        return state->error;
-    }
+    if ( G729A_ENC_STATE_MAGIC != state->magic ) return G729A_ERROR_NOT_INITIALIZED;
     if ( (NULL == speechIn) || (NULL == outData) )
     {
         state->error = G729A_ERROR_NULL_BUFFER;
@@ -105,7 +101,7 @@ G729_Word32 G729A_Encoder_Get_Error(G729A_Enc_state encState)
     
     state = (g729a_encoder_state *)encState;
     
-    if ( G729A_STATE_MAGIC != state->magic ) return G729A_ERROR_NOT_INITIALIZED;
+    if ( G729A_ENC_STATE_MAGIC != state->magic ) return G729A_ERROR_NOT_INITIALIZED;
     
     return state->error;
 }
@@ -126,9 +122,6 @@ G729_Word32 G729A_Decoder_Init(G729A_Dec_state decState)
     
     state = (g729a_decoder_state *)decState;
     
-    state->magic = G729A_STATE_MAGIC;
-    state->error = G729A_NO_ERROR;
-    
     g729_Set_zero(state->synth_buf, M);
     state->synth = state->synth_buf + M;
     
@@ -138,6 +131,9 @@ G729_Word32 G729A_Decoder_Init(G729A_Dec_state decState)
     g729_Init_Decod_ld8a(state);
     g729_Init_Post_Filter(&(state->post_filter_state));
     g729_Init_Post_Process(&(state->post_process_state));
+    
+    state->magic = G729A_DEC_STATE_MAGIC;
+    state->error = G729A_NO_ERROR;
     
     return G729A_NO_ERROR;
 }
@@ -153,11 +149,7 @@ G729_Word32 G729A_Decoder_Process(G729A_Dec_state decState, const G729_UWord8 * 
     
     state = (g729a_decoder_state *)decState;
 
-    if ( G729A_STATE_MAGIC != state->magic )
-    {
-        state->error = G729A_ERROR_NOT_INITIALIZED;
-        return state->error;
-    }
+    if ( G729A_DEC_STATE_MAGIC != state->magic ) return G729A_ERROR_NOT_INITIALIZED;
     if ( (NULL == inData) || (NULL == speechOut) )
     {
         state->error = G729A_ERROR_NULL_BUFFER;
@@ -187,7 +179,7 @@ G729_Word32 G729A_Decoder_Get_Error(G729A_Dec_state decState)
     
     state = (g729a_decoder_state *)decState;
     
-    if ( G729A_STATE_MAGIC != state->magic ) return G729A_ERROR_NOT_INITIALIZED;
+    if ( G729A_DEC_STATE_MAGIC != state->magic ) return G729A_ERROR_NOT_INITIALIZED;
     
     return state->error;
 }
@@ -215,11 +207,7 @@ G729_Word32 G729A_Encoder_Process_Testing(G729A_Enc_state encState, const G729_W
     
     state = (g729a_encoder_state *)encState;
     
-    if ( G729A_STATE_MAGIC != state->magic )
-    {
-        state->error = G729A_ERROR_NOT_INITIALIZED;
-        return state->error;
-    }
+    if ( G729A_ENC_STATE_MAGIC != state->magic ) return G729A_ERROR_NOT_INITIALIZED;
     if ( (NULL == speechIn) || (NULL == outData) )
     {
         state->error = G729A_ERROR_NULL_BUFFER;
@@ -247,11 +235,7 @@ G729_Word32 G729A_Decoder_Process_Testing(G729A_Dec_state decState, const G729_W
     
     state = (g729a_decoder_state *)decState;
     
-    if ( G729A_STATE_MAGIC != state->magic )
-    {
-        state->error = G729A_ERROR_NOT_INITIALIZED;
-        return state->error;
-    }
+    if ( G729A_DEC_STATE_MAGIC != state->magic ) return G729A_ERROR_NOT_INITIALIZED;
     if ( (NULL == inData) || (NULL == speechOut) )
     {
         state->error = G729A_ERROR_NULL_BUFFER;

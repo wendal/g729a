@@ -4,8 +4,11 @@ ITU-T G.729A (Annex A) 8 kbit/s speech codec, fixed point ANSI-C reference
 implementation restructured to support multi-instance use in multi-threaded
 and RTOS based environments.
 
-- Bit-exact with the ITU-T G.729A test vectors, in both the 10-byte compressed
-  payload format and the 164-byte ITU test format.
+- Bit-exact with the ITU-T G.729A test vectors in the 164-byte ITU test format
+  (`bash tests/run_vectors.sh build`: 17/17).
+- The 10-byte compressed format has no ITU reference files: there the codec is
+  verified by round-trip, encoding the ITU speech files and decoding the result
+  reproduces the reference `*.PST` synthesis byte for byte.
 - All codec state lives in caller-provided state structs; there is no global
   or static mutable state left on the codec paths.
 - Portable C99, no dependencies beyond the C standard library.
@@ -68,17 +71,21 @@ Frame format:
 - Speech is 16-bit signed linear PCM (`G729_Word16`), 8 kHz sampling rate,
   processed in frames of 80 samples (10 ms).
 - One encoded frame is 10 bytes (80 bits). `G729A_Encoder_Process()` writes
-  10 bytes, `G729A_Decoder_Process()` consumes 10 bytes.
+  10 bytes, `G729A_Decoder_Process()` consumes 10 bytes. This format cannot
+  signal an erased frame: the frame erasure flag is always 0, so packet loss
+  concealment requires the ITU format below.
 - `G729A_Encoder_Process_Testing()` and `G729A_Decoder_Process_Testing()` use
   the ITU bitstream layout instead: 82 16-bit words per frame, namely a 2-byte
   synchronization word `0x6b21`, a 2-byte size word `80`, followed by the 80
-  speech bits stored one bit per word as `BIT_0`/`BIT_1`. The decoder treats a
-  frame whose speech bits are all zero as an erased frame (`bfi`). This is the
-  format of the files under `test_vectors/`.
+  speech bits stored one bit per word as `BIT_0`/`BIT_1`. A frame is treated as
+  erased (`bfi`, i.e. nothing received) if any of those 80 bit words is zero;
+  that is how a lost frame is signalled. This is the format of the files under
+  `test_vectors/`.
 
-Return values and error codes (`src/interface/g729a_errors.h`): every API
-function returns `G729A_NO_ERROR` (0) on success and a negative code on
-failure.
+Return values and error codes (`src/interface/g729a_errors.h`): the Init,
+Process and Process_Testing entry points return `G729A_NO_ERROR` (0) on success
+and a negative code on failure; `G729A_*_Get_Size()` returns the state size and
+`G729A_Get_Version()` a version string.
 
 - `G729A_ERROR_NULL_STATE` (-1): a state pointer argument is `NULL`.
 - `G729A_ERROR_NULL_BUFFER` (-2): an input or output buffer pointer is `NULL`.
@@ -96,6 +103,13 @@ the processing path itself.
   scratch, error code) is held in the state structs. Two instances are fully
   independent; a single instance must not be used from two threads at the same
   time.
+- `G729A_Encoder_Init()` / `G729A_Decoder_Init()` mark a state as initialized
+  with a magic value that differs per direction, so handing an encoder state to
+  the decoder API (or vice versa) is rejected with
+  `G729A_ERROR_NOT_INITIALIZED` instead of touching a buffer with a different
+  layout. That check is a heuristic, not a type system: do not reuse memory
+  that held an initialized state for anything else without calling the matching
+  Init function again.
 - `G729A_Decoder_Init()` resets `random_seed` to its initial value. The ITU
   reference code kept this seed in a process-wide static, so re-initializing
   one decoder used to reset the concealment noise of every other decoder; with

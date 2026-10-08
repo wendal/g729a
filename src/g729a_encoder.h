@@ -78,7 +78,7 @@ typedef struct _g729a_taming_state
 typedef struct _g729a_encoder_state
 {
     G729_Word32 error;  /* Last error code, see g729a_errors.h                  */
-    G729_UWord32 magic; /* G729A_STATE_MAGIC once G729A_Encoder_Init() has run  */
+    G729_UWord32 magic; /* G729A_ENC_STATE_MAGIC once G729A_Encoder_Init() ran  */
     
     /*--------------------------------------------------------------------------*
      * cod_ld8a.c                                                               *

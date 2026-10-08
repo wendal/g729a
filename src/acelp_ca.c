@@ -48,8 +48,10 @@
 #include "ld8a.h"
 #include "g729a_encoder.h"
 
-/* Constants defined in ld8a.h */
-/*  L_SUBFR   -> Lenght of subframe.                                        */
+/* Constants used below, all defined in g729a_defines.h */
+/*  L_SUBFR   -> Length of subframe.                                        */
+/*  DIM_RR    -> Size of the correlation matrix, provided by the encoder    */
+/*               state field acelp_rr[].                                    */
 /*  NB_POS    -> Number of positions for each pulse.                        */
 /*  STEP      -> Step betweem position of the same pulse.                   */
 /*  MSIZE     -> Size of vectors for cross-correlation between two pulses.  */
