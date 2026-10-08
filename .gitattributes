@@ -1,4 +1,4 @@
+# Only force LF for shell/yaml so CI on Linux never sees CRLF scripts.
+# C sources keep their historical mixed EOL to avoid whole-file rewrites.
 *.sh text eol=lf
 *.yml text eol=lf
-*.c text
-*.h text
