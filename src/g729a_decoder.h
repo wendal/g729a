@@ -87,6 +87,25 @@ typedef struct _g729a_post_process_state
     G729_Word16 x1;
 } g729a_post_process_state;
 
+/*--------------------------------------------------------------------------*
+ * Annex B (VAD/DTX/CNG)                                                    *
+ *--------------------------------------------------------------------------*/
+
+typedef struct _g729a_cng_state
+{
+    /*--------------------------------------------------------------------------*
+     * dec_sid.c
+     *--------------------------------------------------------------------------*/
+    
+    G729_Word16 cur_gain;
+    G729_Word16 lspSid[M];
+    G729_Word16 sid_gain;
+    
+    /* Noise LSF predictor coefficients; run-time-initialized noise_fg
+       table of the ITU reference (tab_dtx.c), kept here per instance. */
+    G729_Word16 noise_fg[MODE][MA_NP][M];
+} g729a_cng_state;
+
 typedef struct _g729a_decoder_state
 {
     G729_Word32 error;  /* Last error code, see g729a_errors.h                 */
@@ -129,6 +148,12 @@ typedef struct _g729a_decoder_state
     g729a_lspdec_state        lspdec_state;
     g729a_post_filter_state   post_filter_state;
     g729a_post_process_state  post_process_state;
+    
+    /*--------------------------------------------------------------------------*
+     * Annex B (VAD/DTX/CNG)                                                    *
+     *--------------------------------------------------------------------------*/
+    
+    g729a_cng_state           cng_state;
 } g729a_decoder_state;
 
 #ifdef __cplusplus
@@ -203,6 +228,74 @@ void g729_Dec_gain(
     G729_Word16 bfi,       /* (i)     : Bad frame indicator                        */
     G729_Word16 *gain_pit, /* (o) Q14 : Pitch gain.                                */
     G729_Word16 *gain_cod  /* (o) Q1  : Code gain.                                 */
+);
+    
+/*--------------------------------------------------------------------------*
+ * Annex B (VAD/DTX/CNG)                                                    *
+ *--------------------------------------------------------------------------*/
+
+/*-------------------------------*
+ * dec_sid.c                     *
+ *-------------------------------*/
+
+void g729_Init_Dec_cng(g729a_cng_state * state);
+
+void g729_Dec_cng(
+    g729a_cng_state * state,
+    G729_Word16 past_ftyp,     /* (i)   : past frame type                      */
+    G729_Word16 sid_sav,       /* (i)   : energy to recover SID gain           */
+    G729_Word16 sh_sid_sav,    /* (i)   : corresponding scaling factor         */
+    G729_Word16 *parm,         /* (i)   : coded SID parameters                 */
+    G729_Word16 *exc,          /* (i/o) : excitation array                     */
+    G729_Word16 *lsp_old,      /* (i/o) : previous lsp                         */
+    G729_Word16 *A_t,          /* (o)   : set of interpolated LPC coefficients */
+    G729_Word16 *seed,         /* (i/o) : random generator seed                */
+    G729_Word16 freq_prev[MA_NP][M]
+                               /* (i/o) : previous LPS for quantization        */
+);
+
+void g729_sid_lsfq_decode(
+    g729a_cng_state * state,   /* (i)   : CNG state (noise_fg)                */
+    G729_Word16 *index,        /* (i)   : quantized indices                   */
+    G729_Word16 *lspq,         /* (o)   : quantized lsp vector                */
+    G729_Word16 freq_prev[MA_NP][M]
+                               /* (i)   : memory of predictor                 */
+);
+
+/*-------------------------------*
+ * qsidgain.c (shared with encoder)                                         *
+ *-------------------------------*/
+
+void g729_Qua_Sidgain(
+    G729_Word16 *ener,         /* (i)   array of energies                   */
+    G729_Word16 *sh_ener,      /* (i)   corresponding scaling factors       */
+    G729_Word16 nb_ener,       /* (i)   number of energies or               */
+    G729_Word16 *enerq,        /* (o)   decoded energies in dB              */
+    G729_Word16 *idx           /* (o)   SID gain quantization index         */
+);
+
+/*-------------------------------*
+ * tab_dtx.c (shared with encoder)                                          *
+ *-------------------------------*/
+
+void g729_Init_lsfq_noise(
+    G729_Word16 noise_fg[MODE][MA_NP][M] /* (o) : noise LSF predictor coef.  */
+);
+
+/*-------------------------------*
+ * calcexc.c (shared with encoder)                                          *
+ *-------------------------------*/
+
+struct _g729a_taming_state;  /* defined in g729a_encoder.h */
+
+void g729_Calc_exc_rand(
+    G729_Word16 cur_gain,      /* (i)   :   target sample gain                 */
+    G729_Word16 *exc,          /* (i/o) :   excitation array                   */
+    G729_Word16 *seed,         /* (i/o) :   random generator seed              */
+    G729_Flag flag_cod,        /* (i)   :   encoder/decoder flag               */
+    struct _g729a_taming_state * taming_state
+                               /* (i/o) :   taming state (encoder only,        */
+                               /*           pass 0 at the decoder)             */
 );
     
 #ifdef __cplusplus

@@ -99,6 +99,10 @@ void g729_Init_Decod_ld8a(g729a_decoder_state * state)
     for ( i = 0; i < 4; ++i ) state->past_qua_en[i] = -14336;
     
     g729_Lsp_decw_reset(&(state->lspdec_state));
+    
+    /* Annex B (VAD/DTX/CNG) */
+    g729_Init_Dec_cng(&(state->cng_state));
+    
     return;
 }
 

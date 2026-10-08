@@ -152,6 +152,10 @@ void g729_Init_Coder_ld8a(g729a_encoder_state * state)
     g729_Lsp_encw_reset(&(state->lspenc_state));
     g729_Init_exc_err(&(state->taming_state));
     
+    /* Annex B (VAD/DTX/CNG) */
+    g729_Init_Vad(&(state->vad_state));
+    g729_Init_Cod_cng(&(state->dtx_state));
+    
     return;
 }
 
