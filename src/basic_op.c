@@ -1552,6 +1552,8 @@ G729_Word32 g729_L_shr_r(G729_Word32 L_var1,G729_Word16 var2)
  |             16 bit short signed integer (G729_Word16) whose value falls   |
  |             in the range : 0x0000 0000 <= var_out <= 0x0000 7fff.         |
  |             It's a Q15 value (point between b15 and b14).                 |
+ |             On invalid operands or division by zero the result saturates  |
+ |             to G729A_MIN_16/G729A_MAX_16 instead of aborting.             |
  |___________________________________________________________________________|
  */
 
@@ -1564,8 +1566,8 @@ G729_Word16 g729_div_s(G729_Word16 var1, G729_Word16 var2)
     
     if ((var1 > var2) || (var1 < 0) || (var2 < 0))
     {
-        /* Invalid operands: saturate to the largest Q15 value matching the dividend's sign. */
-        return (var1 < 0) ? G729A_MIN_16 : G729A_MAX_16;
+        /* Invalid operands: saturate to the extreme matching the quotient's sign. */
+        return ((var1 < 0) != (var2 < 0)) ? G729A_MIN_16 : G729A_MAX_16;
     }
     
     if (var2 == 0)
