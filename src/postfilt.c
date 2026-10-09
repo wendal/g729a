@@ -130,7 +130,8 @@ void g729_Post_Filter(
     g729a_post_filter_state * state,
     G729_Word16 *syn,       /* in/out: synthesis speech (postfiltered is output)    */
     G729_Word16 *Az_4,      /* input : interpolated LPC parameters in all subframes */
-    G729_Word16 *T          /* input : decoded pitch lags in all subframes          */
+    G729_Word16 *T,         /* input : decoded pitch lags in all subframes          */
+    G729_Word16 Vad         /* input : frame type (1 = voice, Annex B)              */
 )
 {
     /*-------------------------------------------------------------------*
@@ -186,9 +187,13 @@ void g729_Post_Filter(
             state->scal_res2[j] = g729_shr(state->res2[j], 2);
         }
         
-        /* pitch postfiltering */
+        /* pitch postfiltering (voice frames only; G.729 Annex B) */
         
-        g729_pit_pst_filt(state->res2, state->scal_res2, t0_min, t0_max, L_SUBFR, res2_pst);
+        if (g729_sub(Vad, 1) == 0)
+            g729_pit_pst_filt(state->res2, state->scal_res2, t0_min, t0_max, L_SUBFR, res2_pst);
+        else
+            for (j=0; j<L_SUBFR; j++)
+                res2_pst[j] = state->res2[j];
         
         /* tilt compensation filter */
         

@@ -44,6 +44,9 @@
 #include "ld8a.h"
 #include "tab_ld8a.h"
 
+#include "dtx.h"
+#include "octet.h"
+
 #include "bitstream.h"
 
 /* prototypes for local functions */
@@ -74,19 +77,51 @@ static G729_Word16   bin2int(G729_Word16 no_of_bits, const G729_Word16 *bitstrea
  *----------------------------------------------------------------------------
  */
 void g729_prm2bits_ld8k(
-        G729_Word16   prm[],           /* input : encoded parameters  (PRM_SIZE parameters)  */
-        G729_Word16 bits[]            /* output: serial bits (SERIAL_SIZE ) bits[0] = bfi
-                                    bits[1] = 80 */
+        G729_Word16   prm[],           /* input : encoded parameters + frame type
+                                          prm[0] = 1: voice, 2: SID, 0: not transmitted */
+        G729_Word16 bits[]            /* output: serial bits, bits[0] = SYNC word,
+                                         bits[1] = number of bits in this frame */
         )
 {
     G729_Word16 i;
     *bits++ = SYNC_WORD;     /* bit[0], at receiver this bits indicates BFI */
-    *bits++ = SIZE_WORD;     /* bit[1], to be compatible with hardware      */
 
-    for (i = 0; i < PRM_SIZE; i++)
-    {
-        int2bin(prm[i], g729_bitsno[i], bits);
-        bits += g729_bitsno[i];
+    switch(prm[0]){
+
+    case 1 : {
+        *bits++ = RATE_8000;
+        for (i = 0; i < PRM_SIZE; i++)
+        {
+            int2bin(prm[i+1], g729_bitsno[i], bits);
+            bits += g729_bitsno[i];
+        }
+        break;
+    }
+
+    case 2 : {
+        /* OCTET_TX_MODE: an extra zero bit is packed at the end of a SID
+           bit stream (15 bits -> 16 bits) */
+        *bits++ = RATE_SID_OCTET;
+        for (i = 0; i < 4; i++)
+        {
+            int2bin(prm[i+1], g729_bitsno2[i], bits);
+            bits += g729_bitsno2[i];
+        }
+        *bits = BIT_0;
+        break;
+    }
+
+    /* not transmitted */
+    default : {
+        /* Deliberate deviation from the ITU reference, which does
+           printf("Unrecognized frame type") + exit(-1) here: the library
+           performs no stdio calls and never exits, so an unknown frame type
+           (cannot be produced by g729_Coder_ld8a) is encoded as a
+           not-transmitted frame. */
+        *bits = RATE_0;
+        break;
+    }
+
     }
 
     return;
@@ -123,16 +158,39 @@ static void int2bin(
  *----------------------------------------------------------------------------
  */
 void g729_bits2prm_ld8k(
-        const G729_Word16 bits[],      /* input : serial bits (80)                       */
-        G729_Word16   prm[]            /* output: decoded parameters (11 parameters)     */
+        const G729_Word16 bits[],      /* input : serial bits, bits[0] = number of
+                                          bits in this frame                       */
+        G729_Word16   prm[]            /* output: prm[1] = frame type (1 voice,
+                                          2 SID, 0 not transmitted), then the
+                                          decoded parameters                     */
         )
 {
     G729_Word16 i;
-    for (i = 0; i < PRM_SIZE; i++)
-    {
-        prm[i] = bin2int(g729_bitsno[i], bits);
-        bits  += g729_bitsno[i];
+    G729_Word16 nb_bits;
+
+    nb_bits = *bits++;        /* Number of bits in this frame       */
+
+    if(nb_bits == RATE_8000) {
+        prm[1] = 1;
+        for (i = 0; i < PRM_SIZE; i++)
+        {
+            prm[i+2] = bin2int(g729_bitsno[i], bits);
+            bits  += g729_bitsno[i];
+        }
     }
+    else if(nb_bits == RATE_SID_OCTET) {
+        /* the last bit of the SID bit stream under octet mode is discarded */
+        prm[1] = 2;
+        for (i = 0; i < 4; i++)
+        {
+            prm[i+2] = bin2int(g729_bitsno2[i], bits);
+            bits += g729_bitsno2[i];
+        }
+    }
+    else {
+        prm[1] = 0;
+    }
+    return;
 
 }
 
@@ -158,35 +216,78 @@ static G729_Word16 bin2int(       /* output: decimal value of bit pattern */
     return(value);
 }
 
-void g729_prm2bits_ld8k_compressed(
-    G729_Word16 prm[],            /* input : encoded parameters  (PRM_SIZE parameters)  */
-    G729_UWord8 bits[]            /* output: serial bits (SERIAL_SIZE )*/
+G729_Word16 g729_prm2bits_ld8k_compressed(
+    G729_Word16 prm[],            /* input : encoded parameters + frame type
+                                     prm[0] = 1: voice, 2: SID, 0: not transmitted */
+    G729_UWord8 bits[]            /* output: serial bits                        */
 )
 {
     G729_BitWriter bw;
     int i;
 
-    g729_bit_writer_init(&bw, bits, 10);  /* 80 bits = 10 bytes */
+    switch(prm[0]){
 
-    for (i = 0; i < PRM_SIZE; ++i)
-    {
-        g729_put_bits(&bw, (unsigned int)g729_bitsno[i], (G729_UWord32)prm[i]);
+    case 1 : {
+        g729_bit_writer_init(&bw, bits, 10);  /* 80 bits = 10 bytes */
+        for (i = 0; i < PRM_SIZE; ++i)
+        {
+            g729_put_bits(&bw, (unsigned int)g729_bitsno[i], (G729_UWord32)prm[i+1]);
+        }
+        g729_flush_bits(&bw);
+        return 10;
     }
-    g729_flush_bits(&bw);
+
+    case 2 : {
+        /* OCTET_TX_MODE: 15 bits SID + 1 zero pad bit = 2 bytes */
+        g729_bit_writer_init(&bw, bits, 2);
+        for (i = 0; i < 4; ++i)
+        {
+            g729_put_bits(&bw, (unsigned int)g729_bitsno2[i], (G729_UWord32)prm[i+1]);
+        }
+        g729_flush_bits(&bw);
+        return 2;
+    }
+
+    /* not transmitted */
+    default : {
+        return 0;
+    }
+
+    }
 }
 
 void g729_bits2prm_ld8k_compressed(
-    const G729_UWord8  bits[],      /* input : serial bits (80)                       */
-    G729_Word16  prm[]              /* output: decoded parameters (11 parameters)     */
+    const G729_UWord8  bits[],    /* input : serial bits                        */
+    G729_Word16  prm[],           /* output: prm[1] = frame type (1 voice,
+                                     2 SID, 0 not transmitted), then the
+                                     decoded parameters                        */
+    G729_Word16  nb_bytes         /* input : number of bytes in this frame      */
 )
 {
     G729_BitReader br;
     int i;
 
-    g729_bit_reader_init(&br, bits, 10);  /* 80 bits = 10 bytes */
-
-    for (i = 0; i < PRM_SIZE; ++i)
+    if (nb_bytes == 10)
     {
-        prm[i] = (G729_Word16)g729_get_bits(&br, (unsigned int)g729_bitsno[i]);
+        prm[1] = 1;
+        g729_bit_reader_init(&br, bits, 10);
+        for (i = 0; i < PRM_SIZE; ++i)
+        {
+            prm[i+2] = (G729_Word16)g729_get_bits(&br, (unsigned int)g729_bitsno[i]);
+        }
+    }
+    else if (nb_bytes == 2)
+    {
+        /* the last bit of the SID bit stream under octet mode is discarded */
+        prm[1] = 2;
+        g729_bit_reader_init(&br, bits, 2);
+        for (i = 0; i < 4; ++i)
+        {
+            prm[i+2] = (G729_Word16)g729_get_bits(&br, (unsigned int)g729_bitsno2[i]);
+        }
+    }
+    else
+    {
+        prm[1] = 0;
     }
 }

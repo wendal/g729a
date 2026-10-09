@@ -46,6 +46,7 @@
 #define G729A_ERROR_NULL_STATE      (-1)  /* state pointer is NULL                       */
 #define G729A_ERROR_NULL_BUFFER     (-2)  /* input or output buffer pointer is NULL      */
 #define G729A_ERROR_NOT_INITIALIZED (-3)  /* state was not set up by G729A_*_Init()      */
+#define G729A_ERROR_BAD_LENGTH      (-4)  /* frame length is not 10, 2 or 0 bytes        */
 
 /* Magic values the Init functions store in the magic field of their state
    struct.  They differ per direction, so handing an encoder state to the

@@ -80,7 +80,8 @@ void g729_Autocorr(
   G729_Word16 x[],      /* (i)    : Input signal                      */
   G729_Word16 m,        /* (i)    : LPC order                         */
   G729_Word16 r_h[],    /* (o)    : Autocorrelations  (msb)           */
-  G729_Word16 r_l[]     /* (o)    : Autocorrelations  (lsb)           */
+  G729_Word16 r_l[],    /* (o)    : Autocorrelations  (lsb)           */
+  G729_Word16 *exp_R0   /* (o)    : scaling factor of r[0] (Annex B)  */
 );
 
 void g729_Lag_window(
@@ -93,7 +94,10 @@ void g729_Levinson(
   G729_Word16 Rh[],      /* (i)     : Rh[m+1] Vector of autocorrelations (msb) */
   G729_Word16 Rl[],      /* (i)     : Rl[m+1] Vector of autocorrelations (lsb) */
   G729_Word16 A[],       /* (o) Q12 : A[m]    LPC coefficients  (m = 10)       */
-  G729_Word16 rc[]       /* (o) Q15 : rc[M]   Relection coefficients.          */
+  G729_Word16 rc[],      /* (o) Q15 : rc[M]   Relection coefficients.          */
+  G729_Word16 *Err,      /* (o)     : Residual energy (Annex B)                */
+  G729_Word16 old_A[],   /* (i/o)   : last A(z) for case of unstable filter    */
+  G729_Word16 old_rc[]   /* (i/o)   : last rc[0..1] for case of unstable filter*/
 );
 
 void g729_Az_lsp(
@@ -380,13 +384,18 @@ void g729_Corr_xy2(
  * Bitstream function    *
  *-----------------------*/
 
+/* prm[0] carries the frame type: 1 = voice (RATE_8000), 2 = SID
+   (RATE_SID/RATE_SID_OCTET), 0 = untransmitted (Annex B). */
 void  g729_prm2bits_ld8k(G729_Word16 prm[], G729_Word16 bits[]);
 void  g729_bits2prm_ld8k(const G729_Word16 bits[], G729_Word16 prm[]);
 #define BIT_0     (short)0x007f /* definition of zero-bit in bit-stream      */
 #define BIT_1     (short)0x0081 /* definition of one-bit in bit-stream       */
 
-void  g729_prm2bits_ld8k_compressed(G729_Word16 prm[], G729_UWord8 bits[]);
-void  g729_bits2prm_ld8k_compressed(const G729_UWord8 bits[], G729_Word16 prm[]);
+/* Octet (compressed) format: 10 bytes for a voice frame, 2 bytes for a SID
+   frame (15 bits + 1 zero pad bit, OCTET_TX_MODE), 0 bytes if untransmitted.
+   g729_prm2bits_ld8k_compressed returns the number of bytes written. */
+G729_Word16 g729_prm2bits_ld8k_compressed(G729_Word16 prm[], G729_UWord8 bits[]);
+void  g729_bits2prm_ld8k_compressed(const G729_UWord8 bits[], G729_Word16 prm[], G729_Word16 nb_bytes);
 
 #define SYNC_WORD (short)0x6b21 /* definition of frame erasure flag          */
 #define SIZE_WORD (short)80     /* number of speech bits                     */

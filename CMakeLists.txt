@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.16)
-project(g729a VERSION 1.1 LANGUAGES C)
+project(g729a VERSION 2.0 LANGUAGES C)
 
 set(CMAKE_C_STANDARD 99)
 set(CMAKE_C_STANDARD_REQUIRED ON)
@@ -29,6 +29,9 @@ target_link_libraries(coder PRIVATE g729a)
 
 add_executable(decoder src/decoder.c)
 target_link_libraries(decoder PRIVATE g729a)
+
+add_executable(test_roundtrip tests/test_roundtrip.c)
+target_link_libraries(test_roundtrip PRIVATE g729a)
 
 if(G729A_ITU_TEST_FORMAT)
     target_compile_definitions(g729a PUBLIC CONTROL_OPT_ITU=1)

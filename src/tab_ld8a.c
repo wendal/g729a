@@ -93,7 +93,7 @@ const G729_Word16 g729_hamwindow[L_WINDOW] = {
  | lag_wind[10]=  0.89481968                           |
  -----------------------------------------------------*/
 
-const G729_Word16 g729_lag_h[M] = {
+const G729_Word16 g729_lag_h[M+2] = {
     32728,
     32619,
     32438,
@@ -103,9 +103,11 @@ const G729_Word16 g729_lag_h[M] = {
     31029,
     30517,
     29946,
-    29321};
+    29321,
+    28645,
+    27923};
 
-const G729_Word16 g729_lag_l[M] = {
+const G729_Word16 g729_lag_l[M+2] = {
     11904,
     17280,
     30720,
@@ -115,7 +117,9 @@ const G729_Word16 g729_lag_l[M] = {
     24384,
      7360,
     19520,
-    14784};
+    14784,
+    22092,
+    12924};
 
 
 /*-----------------------------------------------------*
@@ -529,6 +533,12 @@ const G729_Word16 g729_bitsno[PRM_SIZE] = {1+NC0_B,               /* MA + 1st st
                                  NC1_B*2,         /* 2nd stage        */
                                  8, 1, 13, 4, 7,  /* first subframe   */
                                  5,    13, 4, 7}; /* second subframe  */
+
+/* Annex B: bit allocation of SID frames */
+const G729_Word16 g729_bitsno2[4] = {1, /* SID Lsp : MA  */
+                     5, /* SID Lsp : 1st stage */
+                     4, /* SID Lsp : 2nd stage */
+                     5 };  /* SID gain */
 
 
 /*-----------------------------------------------------*

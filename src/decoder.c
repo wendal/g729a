@@ -29,20 +29,24 @@
  *
  *  ITU-T G.729 Software Package Release 2 (November 2006)
  *
- *  ITU-T G.729A Speech Coder    ANSI-C Source Code
- *  Version 1.1    Last modified: September 1996
+ *  ITU-T G.729A Speech Coder with Annex B    ANSI-C Source Code
+ *  Version 1.5    Last modified: October 2006
  *
  *  Copyright (c) 1996,
- *  AT&T, France Telecom, NTT, Universite de Sherbrooke
+ *  AT&T, France Telecom, NTT, Universite de Sherbrooke, Lucent Technologies,
+ *  Rockwell International
  *  All rights reserved.
  */
 
 /*-----------------------------------------------------------------*
- * Main program of the G.729a 8.0 kbit/s decoder.                  *
+ * Main program of the G.729a 8.0 kbit/s decoder (with Annex B).   *
  *                                                                 *
- *    Usage : decoder  bitstream_file  synth_file                  *
- *                                                                 *
+ *    Usage : decoder  bitstream_file  synth_file  [VAD_flag]      *
  *-----------------------------------------------------------------*/
+
+#ifdef _MSC_VER
+#define _CRT_SECURE_NO_WARNINGS   /* fopen() in this ITU-style test main */
+#endif
 
 #include <stdlib.h>
 #include <stdio.h>
@@ -53,20 +57,10 @@
 #define FRAMESIZE      80
 
 #if defined(CONTROL_OPT_ITU) && (CONTROL_OPT_ITU == 1)
-#define SERIALSIZE     (80+2)
+#define SERIALSIZE     (80+2)   /* SYNC + SIZE + up to 80 bit words    */
 #else
 #define SERIALSIZE     10
 #endif
-
-/*
- This variable should be always set to zero unless transmission errors
- in LSP indices are detected.
- This variable is useful if the channel coding designer decides to
- perform error checking on these important parameters. If an error is
- detected on the  LSP indices, the corresponding flag is
- set to 1 signalling to the decoder to perform parameter substitution.
- (The flags should be set back to 0 for correct transmission).
- */
 
 /*-----------------------------------------------------------------*
  *            Main decoder routine                                 *
@@ -83,28 +77,36 @@ int main(int argc, char *argv[] )
     G729_Word16  speechOut[FRAMESIZE];
     
     G729_Word16 frame;
+    G729_UWord32 nb_in;                 /* words/bytes read for this frame */
+    G729_Word32 vad_flag;               /* Annex B container format flag   */
     FILE   *f_syn, *f_serial;
     
     G729A_Dec_state state;
     
     printf("\n");
     printf("************   G.729a 8.0 KBIT/S SPEECH DECODER  ************\n");
+    printf("                       (WITH ANNEX B)                           \n");
     printf("\n");
     printf("------------------- Fixed point C simulation ----------------\n");
     printf("\n");
-    printf("------------ Version 1.1 (Release 2, November 2006) --------\n");
+    printf("------------ Version 1.5 (Release 2, November 2006) --------\n");
     printf("\n");
     
     /* Passed arguments */
     
-    if ( argc != 3)
+    if ( argc != 3 && argc != 4)
     {
-        printf("Usage :%s bitstream_file  outputspeech_file\n",argv[0]);
+        printf("Usage :%s bitstream_file  outputspeech_file  [VAD_flag]\n",argv[0]);
         printf("\n");
-        printf("Format for bitstream_file:\n");
+        printf("Format for bitstream_file (ITU test format build):\n");
         printf("  One (2-byte) synchronization word \n");
         printf("  One (2-byte) size word,\n");
-        printf("  80 words (2-byte) containing 80 bits.\n");
+        printf("  SIZE words (2-byte) containing the frame bits (80 for a speech\n");
+        printf("  frame, 16 for a SID frame, 0 for an untransmitted frame).\n");
+        printf("\n");
+        printf("VAD_flag (compressed format build only):\n");
+        printf("  1 if the input uses the demonstration length-prefixed\n");
+        printf("  container written by 'coder' with VAD enabled\n");
         printf("\n");
         printf("Format for outputspeech_file:\n");
         printf("  Synthesis is written to a binary file of 16 bits data.\n");
@@ -128,6 +130,9 @@ int main(int argc, char *argv[] )
     printf("Input bitstream file  :   %s\n",argv[1]);
     printf("Synthesis speech file :   %s\n",argv[2]);
     
+    vad_flag = 0;
+    if ( argc == 4 ) vad_flag = atoi(argv[3]);
+    
     /*-----------------------------------------------------------------*
      *           Initialization of decoder                             *
      *-----------------------------------------------------------------*/
@@ -143,23 +148,46 @@ int main(int argc, char *argv[] )
     
     frame = 0;
     
-#if defined(CONTROL_OPT_ITU) && (CONTROL_OPT_ITU == 1)
-    while( fread(serial, sizeof(G729_Word16), SERIALSIZE, f_serial) == SERIALSIZE)
-#else
-    while( fread(serial, sizeof(G729_UWord8), SERIALSIZE, f_serial) == SERIALSIZE)
-#endif
+    for (;;)
     {
-        printf("Frame =%d\r", frame++);
-        
 #if defined(CONTROL_OPT_ITU) && (CONTROL_OPT_ITU == 1)
-        G729A_Decoder_Process_Testing(state, serial, speechOut);
+        /* Variable length frames: SYNC word + SIZE word + SIZE bit words */
+        if ( fread(serial, sizeof(G729_Word16), 2, f_serial) != 2 ) break;
+        if ( (serial[1] < 0) || (serial[1] > 80) ) break;    /* corrupt stream */
+        nb_in = (G729_UWord32)serial[1] + 2;
+        if ( serial[1] > 0 )
+        {
+            if ( fread(&serial[2], sizeof(G729_Word16), serial[1], f_serial)
+                 != (size_t)serial[1] ) break;
+        }
+        G729A_Decoder_Process_Testing(state, serial, nb_in, speechOut);
 #else
-        G729A_Decoder_Process(state, serial, speechOut);
+        if ( vad_flag == 1 )
+        {
+            /* Demonstration length-prefixed container (see coder.c) */
+            G729_UWord8 len;
+            if ( fread(&len, sizeof(G729_UWord8), 1, f_serial) != 1 ) break;
+            if ( len > 10 ) break;      /* corrupt stream: over voice frame size */
+            nb_in = len;
+            if ( len > 0 )
+            {
+                if ( fread(serial, sizeof(G729_UWord8), len, f_serial)
+                     != (size_t)len ) break;
+            }
+        }
+        else
+        {
+            /* Legacy raw stream: fixed 10 bytes per frame */
+            nb_in = 10;
+            if ( fread(serial, sizeof(G729_UWord8), 10, f_serial) != 10 ) break;
+        }
+        G729A_Decoder_Process(state, serial, nb_in, speechOut);
 #endif
+        
+        printf("Frame =%d\r", frame++);
         fwrite(speechOut, sizeof(G729_Word16), FRAMESIZE, f_syn);
     }
     
     printf("Frame =%d\n", frame);
     return(0);
 }
-

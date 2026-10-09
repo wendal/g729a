@@ -2,7 +2,7 @@ name: CI
 
 on:
   push:
-    branches: [master, modernize]
+    branches: [master, modernize, annex-b]
   pull_request:
 
 jobs:
@@ -45,3 +45,6 @@ jobs:
           test "$(stat -c%s /tmp/out.pcm)" -eq 600000
           # output must not be all zeros
           od -An -tx1 /tmp/out.pcm | tr -d ' 0\n' | grep -q .
+
+      - name: Annex B octet API roundtrip self test
+        run: ./build/test_roundtrip

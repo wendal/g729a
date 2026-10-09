@@ -55,7 +55,8 @@ void g729_Autocorr(
     G729_Word16 x[],      /* (i)    : Input signal                      */
     G729_Word16 m,        /* (i)    : LPC order                         */
     G729_Word16 r_h[],    /* (o)    : Autocorrelations  (msb)           */
-    G729_Word16 r_l[]     /* (o)    : Autocorrelations  (lsb)           */
+    G729_Word16 r_l[],    /* (o)    : Autocorrelations  (lsb)           */
+    G729_Word16 *exp_R0   /* (o)    : scaling factor of r[0] (Annex B)  */
 )
 {
     G729_Word16 i, j, norm;
@@ -72,6 +73,8 @@ void g729_Autocorr(
     }
     
     /* Compute r[0] and test for overflow */
+    
+    *exp_R0 = 1;
     
     do {
         sum = 1;    /* Avoid case of all zeros */
@@ -94,6 +97,7 @@ void g729_Autocorr(
             {
                 y[i] = g729_shr(y[i], 2);
             }
+            *exp_R0 = g729_add((*exp_R0), 4);
         }
     }while (overflow != 0);
     
@@ -102,6 +106,7 @@ void g729_Autocorr(
     norm = g729_norm_l(sum);
     sum  = g729_L_shl(sum, norm);
     g729_L_Extract(sum, &r_h[0], &r_l[0]);     /* Put in DPF format (see oper_32b) */
+    *exp_R0 = g729_sub(*exp_R0, norm);
     
     /* r[1] to r[m] */
     
@@ -221,7 +226,10 @@ void g729_Levinson(
     G729_Word16 Rh[],      /* (i)     : Rh[M+1] Vector of autocorrelations (msb) */
     G729_Word16 Rl[],      /* (i)     : Rl[M+1] Vector of autocorrelations (lsb) */
     G729_Word16 A[],       /* (o) Q12 : A[M]    LPC coefficients  (m = 10)       */
-    G729_Word16 rc[]       /* (o) Q15 : rc[M]   Reflection coefficients.         */
+    G729_Word16 rc[],      /* (o) Q15 : rc[M]   Reflection coefficients.         */
+    G729_Word16 *Err,      /* (o)     : Residual energy (Annex B)                */
+    G729_Word16 old_A[],   /* (i/o)   : last A(z) for case of unstable filter    */
+    G729_Word16 old_rc[]   /* (i/o)   : last rc[0..1] for case of unstable filter*/
 )
 {
     G729_Word16 i, j;
@@ -285,9 +293,18 @@ void g729_Levinson(
         g729_L_Extract(t2, &Kh, &Kl);           /* K in DPF                        */
         rc[i-1] = Kh;
 
-        /* The ITU reference restores old_A/old_rc when |K| > 32750. G.729A
-           does not use rc, and the threshold was verified unreachable over
-           the full test-vector suite, so that fallback is omitted. */
+        /* Test for unstable filter. If unstable keep old A(z) */
+
+        if (g729_sub(g729_abs_s(Kh), 32750) > 0)
+        {
+            for(j=0; j<=M; j++)
+            {
+                A[j] = old_A[j];
+            }
+            rc[0] = old_rc[0];        /* only two rc coefficients are needed */
+            rc[1] = old_rc[1];
+            return;
+        }
         
         /*------------------------------------------*
          *  Compute new LPC coeff. -> An[i]         *
@@ -331,12 +348,16 @@ void g729_Levinson(
     
     /* Truncate A[i] in Q27 to Q12 with rounding */
     
+    *Err = g729_shr(alp_h, alp_exp);
+    
     A[0] = 4096;
     for(i=1; i<=M; i++)
     {
         t0   = g729_L_Comp(Ah[i], Al[i]);
-        A[i] = g729_round(g729_L_shl(t0, 1));
+        old_A[i] = A[i] = g729_round(g729_L_shl(t0, 1));
     }
+    old_rc[0] = rc[0];
+    old_rc[1] = rc[1];
     
     return;
 }
