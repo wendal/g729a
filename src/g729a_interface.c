@@ -282,8 +282,11 @@ G729_Word32 G729A_Decoder_Process_Testing(G729A_Dec_state decState, const G729_W
         state->error = G729A_ERROR_NULL_BUFFER;
         return state->error;
     }
-    if ( inLen < 2 )
+    if ( (inLen < 2)
+         || (inData[1] < 0) || (inData[1] > 80)
+         || ((G729_UWord32)inData[1] + 2 != inLen) )
     {
+        /* SIZE word inconsistent with the frame length, or out of range */
         state->error = G729A_ERROR_BAD_LENGTH;
         return state->error;
     }

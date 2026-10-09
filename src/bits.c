@@ -113,6 +113,11 @@ void g729_prm2bits_ld8k(
 
     /* not transmitted */
     default : {
+        /* Deliberate deviation from the ITU reference, which does
+           printf("Unrecognized frame type") + exit(-1) here: the library
+           performs no stdio calls and never exits, so an unknown frame type
+           (cannot be produced by g729_Coder_ld8a) is encoded as a
+           not-transmitted frame. */
         *bits = RATE_0;
         break;
     }

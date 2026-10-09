@@ -153,6 +153,7 @@ int main(int argc, char *argv[] )
 #if defined(CONTROL_OPT_ITU) && (CONTROL_OPT_ITU == 1)
         /* Variable length frames: SYNC word + SIZE word + SIZE bit words */
         if ( fread(serial, sizeof(G729_Word16), 2, f_serial) != 2 ) break;
+        if ( (serial[1] < 0) || (serial[1] > 80) ) break;    /* corrupt stream */
         nb_in = (G729_UWord32)serial[1] + 2;
         if ( serial[1] > 0 )
         {
@@ -166,6 +167,7 @@ int main(int argc, char *argv[] )
             /* Demonstration length-prefixed container (see coder.c) */
             G729_UWord8 len;
             if ( fread(&len, sizeof(G729_UWord8), 1, f_serial) != 1 ) break;
+            if ( len > 10 ) break;      /* corrupt stream: over voice frame size */
             nb_in = len;
             if ( len > 0 )
             {
