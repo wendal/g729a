@@ -30,6 +30,9 @@ target_link_libraries(coder PRIVATE g729a)
 add_executable(decoder src/decoder.c)
 target_link_libraries(decoder PRIVATE g729a)
 
+add_executable(test_roundtrip tests/test_roundtrip.c)
+target_link_libraries(test_roundtrip PRIVATE g729a)
+
 if(G729A_ITU_TEST_FORMAT)
     target_compile_definitions(g729a PUBLIC CONTROL_OPT_ITU=1)
 endif()

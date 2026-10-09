@@ -56,6 +56,54 @@ for bit_file in "$TV/BIT"/*.BIT; do
     fi
 done
 
+# Annex B (G.729A + VAD/DTX/CNG): encoder runs with VAD enabled and both
+# directions deal with variable length frames (80-bit speech / 16-bit SID
+# / untransmitted). The "a"-suffixed files are the Annex A + Annex B
+# references; tstseq5/6 are decoder-only sequences (frame erasure / SID).
+if [ -d "$TV/annexb" ]; then
+    # Encoder: tstseqN.bin -> tstseqNa.bit  (VAD on)
+    for n in 1 2 3 4; do
+        in_file="$TV/annexb/tstseq$n.bin"
+        ref="$TV/annexb/tstseq${n}a.bit"
+        [ -f "$in_file" ] && [ -f "$ref" ] || continue
+        "$CODER" "$in_file" "$TMP/tstseq${n}a.bit" 1 >/dev/null 2>&1
+        if cmp -s "$TMP/tstseq${n}a.bit" "$ref"; then
+            echo "PASS  enc-b tstseq$n"
+        else
+            echo "FAIL  enc-b tstseq$n"
+            fail=1
+        fi
+    done
+
+    # Decoder: tstseqNa.bit -> tstseqNa.out
+    for n in 1 2 3 4; do
+        bit_file="$TV/annexb/tstseq${n}a.bit"
+        ref="$TV/annexb/tstseq${n}a.out"
+        [ -f "$bit_file" ] && [ -f "$ref" ] || continue
+        "$DECODER" "$bit_file" "$TMP/tstseq${n}a.out" >/dev/null 2>&1
+        if cmp -s "$TMP/tstseq${n}a.out" "$ref"; then
+            echo "PASS  dec-b tstseq${n}a"
+        else
+            echo "FAIL  dec-b tstseq${n}a"
+            fail=1
+        fi
+    done
+
+    # Decoder-only: tstseq5/6.bit -> tstseq5/6a.out
+    for n in 5 6; do
+        bit_file="$TV/annexb/tstseq$n.bit"
+        ref="$TV/annexb/tstseq${n}a.out"
+        [ -f "$bit_file" ] && [ -f "$ref" ] || continue
+        "$DECODER" "$bit_file" "$TMP/tstseq${n}a.out" >/dev/null 2>&1
+        if cmp -s "$TMP/tstseq${n}a.out" "$ref"; then
+            echo "PASS  dec-b tstseq$n"
+        else
+            echo "FAIL  dec-b tstseq$n"
+            fail=1
+        fi
+    done
+fi
+
 if [ "$fail" -ne 0 ]; then
     echo "RESULT: FAIL" >&2
     exit 1
